@@ -8,6 +8,7 @@ class Profile {
     required this.femurLength,
     required this.limitations,
     required this.goal,
+    required this.weightHistory,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class Profile {
   final String femurLength;
   final List<String> limitations;
   final String goal;
+  final List<WeightEntry> weightHistory;
 
   Profile copyWith({
     String? name,
@@ -27,6 +29,7 @@ class Profile {
     String? femurLength,
     List<String>? limitations,
     String? goal,
+    List<WeightEntry>? weightHistory,
   }) {
     return Profile(
       id: id,
@@ -37,6 +40,7 @@ class Profile {
       femurLength: femurLength ?? this.femurLength,
       limitations: limitations ?? this.limitations,
       goal: goal ?? this.goal,
+      weightHistory: weightHistory ?? this.weightHistory,
     );
   }
 
@@ -50,6 +54,7 @@ class Profile {
       'femurLength': femurLength,
       'limitations': limitations,
       'goal': goal,
+      'weightHistory': weightHistory.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -63,6 +68,34 @@ class Profile {
       femurLength: (json['femurLength'] as String?) ?? 'normal',
       limitations: (json['limitations'] as List?)?.cast<String>() ?? <String>[],
       goal: (json['goal'] as String?) ?? 'hypertrophy',
+      weightHistory: (json['weightHistory'] as List?)
+              ?.map((e) => WeightEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          <WeightEntry>[],
+    );
+  }
+}
+
+class WeightEntry {
+  WeightEntry({
+    required this.dateIso,
+    required this.weightKg,
+  });
+
+  final String dateIso;
+  final double weightKg;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'dateIso': dateIso,
+      'weightKg': weightKg,
+    };
+  }
+
+  factory WeightEntry.fromJson(Map<String, dynamic> json) {
+    return WeightEntry(
+      dateIso: (json['dateIso'] as String?) ?? '',
+      weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0,
     );
   }
 }
