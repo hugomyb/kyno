@@ -405,8 +405,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     final active = state.activeWorkout;
     if (active == null) return;
     if (_isActiveInvalid(state, active)) {
-      ref.read(appStateProvider.notifier).clearActiveWorkout();
-      ref.read(appStateProvider.notifier).save();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(appStateProvider.notifier).clearActiveWorkout();
+        ref.read(appStateProvider.notifier).save();
+      });
       return;
     }
     if (widget.sessionId != null && active.session.templateId != widget.sessionId) {

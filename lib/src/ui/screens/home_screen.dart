@@ -44,13 +44,10 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                if (completedForToday != null) ...[
-                  _completedCard(context, completedForToday),
-                  const SizedBox(height: 16),
-                ],
-                if (completedForToday == null &&
-                    latestCompleted != null &&
-                    _isCompletedToday(ref, latestCompleted.templateId))
+                if (latestCompleted != null &&
+                    _isCompletedToday(ref, latestCompleted.templateId) &&
+                    (todaySession == null ||
+                        latestCompleted.templateId != todaySession.id))
                   ...[
                     _completedCard(context, latestCompleted),
                     const SizedBox(height: 16),
