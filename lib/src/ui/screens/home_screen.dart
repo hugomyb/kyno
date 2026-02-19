@@ -89,15 +89,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _todayCard(BuildContext context, WidgetRef ref, WorkoutSessionTemplate? session) {
     if (session == null) {
-      return Expanded(
-        child: Center(
-          child: Text(
-            'Aucune seance. Importer un programme.',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final isRestDay = session.exercises.isEmpty;
