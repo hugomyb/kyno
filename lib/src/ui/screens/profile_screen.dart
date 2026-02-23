@@ -19,9 +19,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late TextEditingController _heightController;
   late TextEditingController _weightController;
   late TextEditingController _startTimerController;
+  late TextEditingController _currentPasswordController;
+  late TextEditingController _newPasswordController;
+  late TextEditingController _confirmPasswordController;
   bool _didInitFromProfile = false;
   bool _hasChanges = false;
   bool _isSaving = false;
+  bool _isPasswordSaving = false;
 
   @override
   void initState() {
@@ -36,9 +40,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _startTimerController = TextEditingController(
       text: profile.startTimerSeconds.toString(),
     );
+    _currentPasswordController = TextEditingController();
+    _newPasswordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
     _heightController.addListener(_onFieldChanged);
     _weightController.addListener(_onFieldChanged);
     _startTimerController.addListener(_onFieldChanged);
+    _currentPasswordController.addListener(_onPasswordFieldChanged);
+    _newPasswordController.addListener(_onPasswordFieldChanged);
+    _confirmPasswordController.addListener(_onPasswordFieldChanged);
   }
 
   @override
@@ -46,6 +56,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _heightController.dispose();
     _weightController.dispose();
     _startTimerController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -183,6 +196,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             controller: _startTimerController,
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 16),
+          Text(
+            'Mot de passe',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 12),
+          _inputBlock(
+            label: 'Mot de passe actuel',
+            controller: _currentPasswordController,
+            keyboardType: TextInputType.text,
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          _inputBlock(
+            label: 'Nouveau mot de passe',
+            controller: _newPasswordController,
+            keyboardType: TextInputType.text,
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          _inputBlock(
+            label: 'Confirmer le nouveau mot de passe',
+            controller: _confirmPasswordController,
+            keyboardType: TextInputType.text,
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _canSavePassword && !_isPasswordSaving ? _savePassword : null,
+              child: Text(_isPasswordSaving ? 'Enregistrement...' : 'Mettre à jour'),
+            ),
+          ),
         ],
       ),
     );
@@ -310,6 +358,53 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _syncDirtyFlag(ref.read(appDataProvider).profile);
   }
 
+  void _onPasswordFieldChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool get _canSavePassword {
+    final current = _currentPasswordController.text.trim();
+    final next = _newPasswordController.text.trim();
+    final confirm = _confirmPasswordController.text.trim();
+    if (current.isEmpty || next.isEmpty || confirm.isEmpty) return false;
+    return true;
+  }
+
+  Future<void> _savePassword() async {
+    final current = _currentPasswordController.text.trim();
+    final next = _newPasswordController.text.trim();
+    final confirm = _confirmPasswordController.text.trim();
+    if (next != confirm) {
+      _showMessage('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    if (next.length < 8) {
+      _showMessage('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+    setState(() => _isPasswordSaving = true);
+    try {
+      await ref.read(appDataProvider.notifier).changePassword(
+            currentPassword: current,
+            newPassword: next,
+            confirmPassword: confirm,
+          );
+      if (!mounted) return;
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      _showMessage('Mot de passe mis à jour.');
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Impossible de mettre à jour le mot de passe.');
+    } finally {
+      if (!mounted) return;
+      setState(() => _isPasswordSaving = false);
+    }
+  }
+
   void _syncDirtyFlag(Profile profile) {
     if (!_didInitFromProfile) return;
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
@@ -328,6 +423,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String label,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    bool obscureText = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,6 +433,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          obscureText: obscureText,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF3F5FA),
@@ -347,6 +444,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }

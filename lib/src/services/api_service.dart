@@ -29,6 +29,39 @@ class ApiService {
     return Profile.fromJson(json['profile'] as Map<String, dynamic>);
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final res = await _client.put('$_base/profile/password', {
+      'current_password': currentPassword,
+      'password': newPassword,
+      'password_confirmation': confirmPassword,
+    });
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) {
+      String message = 'Password update failed';
+      try {
+        final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+        if (json['message'] != null) {
+          message = json['message'].toString();
+        }
+        if (json['errors'] is Map) {
+          final errors = json['errors'] as Map;
+          final first = errors.values.cast<List>().expand((e) => e).cast<String?>().firstWhere(
+                (e) => e != null && e.trim().isNotEmpty,
+                orElse: () => null,
+              );
+          if (first != null) {
+            message = first;
+          }
+        }
+      } catch (_) {}
+      throw ApiException(message, res.statusCode);
+    }
+  }
+
   Future<List<WeightEntry>> fetchWeights() async {
     final res = await _client.get('$_base/weight-entries');
     if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');

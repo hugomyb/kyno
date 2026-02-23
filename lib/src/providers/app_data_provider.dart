@@ -190,6 +190,22 @@ class AppDataNotifier extends Notifier<AppData> {
     }
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      await api.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+    } on UnauthorizedException {
+      await ref.read(authProvider.notifier).forceLogout();
+    }
+  }
+
   Future<void> addWeightEntry(double weightKg, {DateTime? date}) async {
     final now = date ?? DateTime.now();
     final day = DateTime(now.year, now.month, now.day);
