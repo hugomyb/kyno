@@ -37,15 +37,19 @@ else
   fi
 fi
 
-if [ -d "${WORKTREE_DIR}/.git" ] || [ -f "${WORKTREE_DIR}/.git" ]; then
+git worktree prune >/dev/null 2>&1 || true
+if git worktree list --porcelain | grep -q "worktree ${WORKTREE_DIR}"; then
   git worktree remove -f "${WORKTREE_DIR}" >/dev/null 2>&1 || true
+fi
+if [ -e "${WORKTREE_DIR}" ]; then
+  rm -rf "${WORKTREE_DIR}" >/dev/null 2>&1 || true
 fi
 
 git worktree add "${WORKTREE_DIR}" "${BRANCH}"
 
 # Clean and copy build output into worktree
 if command -v rsync >/dev/null 2>&1; then
-  rsync -av --delete "${BUILD_DIR}/" "${WORKTREE_DIR}/"
+  rsync -av --delete --exclude ".git" "${BUILD_DIR}/" "${WORKTREE_DIR}/"
 else
   rm -rf "${WORKTREE_DIR:?}"/*
   cp -R "${BUILD_DIR}/"* "${WORKTREE_DIR}/"
