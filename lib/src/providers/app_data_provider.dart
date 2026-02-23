@@ -67,6 +67,7 @@ class AppData {
         limitations: <String>[],
         goal: '',
         startTimerSeconds: 5,
+        soundEnabled: true,
         weightHistory: <WeightEntry>[],
       ),
       weightEntries: <WeightEntry>[],

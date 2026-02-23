@@ -69,6 +69,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   bool _paused = false;
   bool _soundEnabled = true;
   bool _sessionReady = false;
+  bool _soundInitialized = false;
   WorkoutSessionLog? _completedSession;
 
   @override
@@ -104,6 +105,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
     if (session.id.isEmpty) {
       return const Scaffold(body: Center(child: Text('Séance introuvable.')));
+    }
+
+    if (!_soundInitialized && state.profile.id != 'profile') {
+      _soundEnabled = state.profile.soundEnabled;
+      _soundInitialized = true;
     }
 
     if (!_sessionReady) {
@@ -1288,7 +1294,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   }
 
   void _toggleSound() {
-    setState(() => _soundEnabled = !_soundEnabled);
+    final next = !_soundEnabled;
+    setState(() => _soundEnabled = next);
+    final profile = ref.read(appDataProvider).profile;
+    ref.read(appDataProvider.notifier).updateProfile(
+          profile.copyWith(soundEnabled: next),
+        );
   }
 
   void _playBeep() {

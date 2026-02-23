@@ -9,6 +9,7 @@ class Profile {
     required this.limitations,
     required this.goal,
     required this.startTimerSeconds,
+    required this.soundEnabled,
     required this.weightHistory,
   });
 
@@ -21,6 +22,7 @@ class Profile {
   final List<String> limitations;
   final String goal;
   final int startTimerSeconds;
+  final bool soundEnabled;
   final List<WeightEntry> weightHistory;
 
   Profile copyWith({
@@ -32,6 +34,7 @@ class Profile {
     List<String>? limitations,
     String? goal,
     int? startTimerSeconds,
+    bool? soundEnabled,
     List<WeightEntry>? weightHistory,
   }) {
     return Profile(
@@ -44,6 +47,7 @@ class Profile {
       limitations: limitations ?? this.limitations,
       goal: goal ?? this.goal,
       startTimerSeconds: startTimerSeconds ?? this.startTimerSeconds,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
       weightHistory: weightHistory ?? this.weightHistory,
     );
   }
@@ -59,6 +63,7 @@ class Profile {
       'limitations': limitations,
       'goal': goal,
       'start_timer_seconds': startTimerSeconds,
+      'sound_enabled': soundEnabled,
       'weight_history': weightHistory.map((e) => e.toJson()).toList(),
     };
   }
@@ -74,6 +79,7 @@ class Profile {
       limitations: (json['limitations'] as List?)?.cast<String>() ?? <String>[],
       goal: (json['goal'] as String?) ?? '',
       startTimerSeconds: (json['start_timer_seconds'] as num?)?.toInt() ?? 5,
+      soundEnabled: (json['sound_enabled'] as bool?) ?? true,
       weightHistory: (json['weight_history'] as List?)
               ?.map((e) => WeightEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
