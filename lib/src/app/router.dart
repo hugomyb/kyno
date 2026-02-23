@@ -1,45 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/auth_provider.dart';
 import '../services/workout_ui_state.dart';
 import '../ui/screens/home_screen.dart';
-import '../ui/screens/program_import_screen.dart';
+import '../ui/screens/exercises_screen.dart';
+import '../ui/screens/login_screen.dart';
 import '../ui/screens/program_screen.dart';
 import '../ui/screens/profile_screen.dart';
+import '../ui/screens/session_editor_screen.dart';
+import '../ui/screens/sessions_screen.dart';
 import '../ui/screens/workout_screen.dart';
 
-final appRouter = GoRouter(
-  routes: [
-    ShellRoute(
-      builder: (context, state, child) => NavScaffold(child: child),
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const HomeScreen(),
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
+  return GoRouter(
+    initialLocation: authState.isAuthenticated ? '/' : '/login',
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/sessions',
+        builder: (context, state) => const SessionsScreen(),
+      ),
+      GoRoute(
+        path: '/exercises',
+        builder: (context, state) => const ExercisesScreen(),
+      ),
+      GoRoute(
+        path: '/sessions/new',
+        builder: (context, state) => const SessionEditorScreen(),
+      ),
+      GoRoute(
+        path: '/sessions/:id',
+        builder: (context, state) => SessionEditorScreen(
+          sessionId: state.pathParameters['id'],
         ),
-        GoRoute(
-          path: '/program',
-          builder: (context, state) => const ProgramScreen(),
-        ),
-        GoRoute(
-          path: '/workout',
-          builder: (context, state) => WorkoutScreen(
-            sessionId: state.uri.queryParameters['sessionId'],
-            restart: state.uri.queryParameters['restart'] == '1',
+      ),
+      ShellRoute(
+        builder: (context, state, child) => NavScaffold(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const HomeScreen(),
           ),
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/import',
-      builder: (context, state) => const ProgramImportScreen(),
-    ),
-  ],
-);
+          GoRoute(
+            path: '/program',
+            builder: (context, state) => const ProgramScreen(),
+          ),
+          GoRoute(
+            path: '/workout',
+            builder: (context, state) => WorkoutScreen(
+              sessionId: state.uri.queryParameters['sessionId'],
+              restart: state.uri.queryParameters['restart'] == '1',
+            ),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
+        ],
+      ),
+    ],
+    redirect: (context, state) {
+      final isLoggingIn = state.matchedLocation == '/login';
+      if (!authState.isAuthenticated) {
+        return isLoggingIn ? null : '/login';
+      }
+      if (authState.isAuthenticated && isLoggingIn) {
+        return '/';
+      }
+      return null;
+    },
+  );
+});
 
 class NavScaffold extends StatelessWidget {
   const NavScaffold({super.key, required this.child});

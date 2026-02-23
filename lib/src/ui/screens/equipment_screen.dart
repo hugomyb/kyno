@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/app_state_provider.dart';
+import '../../providers/app_data_provider.dart';
 
 class EquipmentScreen extends ConsumerWidget {
   const EquipmentScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final equipment = ref.watch(appStateProvider).equipment;
-    final notifier = ref.read(appStateProvider.notifier);
+    final equipment = ref.watch(appDataProvider).equipment;
+    final notifier = ref.read(appDataProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,7 +41,6 @@ class EquipmentScreen extends ConsumerWidget {
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () {
                       notifier.removeEquipment(item.id);
-                      notifier.save();
                     },
                   ),
                 ),
@@ -62,7 +61,7 @@ class EquipmentScreen extends ConsumerWidget {
 
   Future<void> _showAddSheet(
     BuildContext context,
-    AppStateNotifier notifier,
+    AppDataNotifier notifier,
   ) async {
     final nameController = TextEditingController();
     final notesController = TextEditingController();
@@ -107,7 +106,6 @@ class EquipmentScreen extends ConsumerWidget {
                           nameController.text.trim(),
                           notesController.text.trim(),
                         );
-                        notifier.save();
                         Navigator.of(context).pop();
                       },
                       child: const Text('Ajouter'),

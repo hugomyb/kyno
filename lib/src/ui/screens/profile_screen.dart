@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/profile.dart';
-import '../../providers/app_state_provider.dart';
+import '../../providers/app_data_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../widgets/app_background.dart';
-import '../widgets/soft_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,36 +18,67 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late TextEditingController _heightController;
   late TextEditingController _weightController;
-  late TextEditingController _goalController;
+  late TextEditingController _startTimerController;
+  bool _didInitFromProfile = false;
+  bool _hasChanges = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(appStateProvider).profile;
+    final profile = ref.read(appDataProvider).profile;
     _heightController = TextEditingController(
       text: profile.heightCm == 0 ? '' : profile.heightCm.toString(),
     );
     _weightController = TextEditingController(
       text: profile.weightKg == 0 ? '' : profile.weightKg.toString(),
     );
-    _goalController = TextEditingController(text: profile.goal);
+    _startTimerController = TextEditingController(
+      text: profile.startTimerSeconds.toString(),
+    );
+    _heightController.addListener(_onFieldChanged);
+    _weightController.addListener(_onFieldChanged);
+    _startTimerController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
     _heightController.dispose();
     _weightController.dispose();
-    _goalController.dispose();
+    _startTimerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(appStateProvider).profile;
-    final history = _sortedHistory(profile.weightHistory);
+    final profile = ref.watch(appDataProvider).profile;
+    final history = ref.watch(appDataProvider).weightEntries;
+
+    if (!_didInitFromProfile && profile.id != 'profile') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _heightController.text = profile.heightCm == 0 ? '' : profile.heightCm.toString();
+        _weightController.text = profile.weightKg == 0 ? '' : profile.weightKg.toString();
+        _startTimerController.text = profile.startTimerSeconds.toString();
+        setState(() {
+          _didInitFromProfile = true;
+          _hasChanges = false;
+        });
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _hasChanges
+          ? SizedBox(
+              width: MediaQuery.of(context).size.width - 32,
+              child: FilledButton(
+                onPressed: _isSaving ? null : _saveProfile,
+                child: Text(_isSaving ? 'Enregistrement...' : 'Enregistrer'),
+              ),
+            )
+          : null,
       body: Stack(
         children: [
           const AppBackground(),
@@ -58,6 +89,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 _profileCard(context, profile),
                 const SizedBox(height: 16),
                 _weightChartCard(context, history),
+                const SizedBox(height: 16),
+                _settingsCard(context),
+                const SizedBox(height: 80),
               ],
             ),
           ),
@@ -108,17 +142,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _inputBlock(
-            label: 'Objectif',
-            controller: _goalController,
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 52,
+            height: 48,
             width: double.infinity,
-            child: FilledButton(
-              onPressed: _saveProfile,
-              child: const Text('Enregistrer'),
+            child: OutlinedButton(
+              onPressed: () => ref.read(authProvider.notifier).logout(),
+              child: const Text('Se deconnecter'),
             ),
           ),
         ],
@@ -126,7 +156,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _settingsCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Paramètres',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          _inputBlock(
+            label: 'Timer de départ (s)',
+            controller: _startTimerController,
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _weightChartCard(BuildContext context, List<WeightEntry> history) {
+    final sorted = [...history]..sort((a, b) => a.dateIso.compareTo(b.dateIso));
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -148,7 +211,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          if (history.isEmpty)
+          if (sorted.isEmpty)
             Text(
               'Aucune mesure enregistree.',
               style: Theme.of(context).textTheme.bodySmall,
@@ -175,10 +238,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
-                          if (index < 0 || index >= history.length) {
+                          if (index < 0 || index >= sorted.length) {
                             return const SizedBox.shrink();
                           }
-                          final date = DateTime.tryParse(history[index].dateIso);
+                          final date = DateTime.tryParse(sorted[index].dateIso);
                           final label =
                               date == null ? '' : DateFormat('dd/MM').format(date);
                           return Text(label, style: const TextStyle(fontSize: 10));
@@ -193,8 +256,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       color: Theme.of(context).colorScheme.primary,
                       dotData: const FlDotData(show: true),
                       spots: [
-                        for (var i = 0; i < history.length; i++)
-                          FlSpot(i.toDouble(), history[i].weightKg),
+                        for (var i = 0; i < sorted.length; i++)
+                          FlSpot(i.toDouble(), sorted[i].weightKg),
                       ],
                     ),
                   ],
@@ -206,63 +269,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _saveProfile() {
-    final notifier = ref.read(appStateProvider.notifier);
-    final profile = ref.read(appStateProvider).profile;
+  Future<void> _saveProfile() async {
+    final notifier = ref.read(appDataProvider.notifier);
+    final profile = ref.read(appDataProvider).profile;
 
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
     final weight = double.tryParse(_weightController.text.trim()) ?? profile.weightKg;
-    final goal = _goalController.text.trim().isEmpty ? profile.goal : _goalController.text.trim();
+    final startTimerSeconds =
+        int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
 
-    var updated = profile.copyWith(
+    final updated = profile.copyWith(
       heightCm: height,
       weightKg: weight,
-      goal: goal,
+      startTimerSeconds: startTimerSeconds.clamp(0, 60),
     );
 
-    if (weight > 0) {
-      updated = updated.copyWith(
-        weightHistory: _upsertWeightForToday(profile.weightHistory, weight),
+    setState(() => _isSaving = true);
+    try {
+      await notifier.updateProfile(updated);
+      if (weight > 0) {
+        await notifier.addWeightEntry(weight);
+      }
+      if (!mounted) return;
+      setState(() => _hasChanges = false);
+    } catch (error) {
+      if (!mounted) return;
+      final message = error.toString().contains('FormatException')
+          ? 'Réponse invalide du serveur. Vérifie l’API.'
+          : 'Impossible de sauvegarder le profil.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
+    } finally {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
     }
-
-    notifier.updateProfile(updated);
-    notifier.save();
   }
 
-  List<WeightEntry> _sortedHistory(List<WeightEntry> history) {
-    final list = [...history];
-    list.sort((a, b) => a.dateIso.compareTo(b.dateIso));
-    return list;
+  void _onFieldChanged() {
+    _syncDirtyFlag(ref.read(appDataProvider).profile);
   }
 
-  List<WeightEntry> _upsertWeightForToday(
-    List<WeightEntry> history,
-    double weight,
-  ) {
-    final today = DateTime.now();
-    final updated = [...history];
-    final index = updated.indexWhere((entry) {
-      final date = DateTime.tryParse(entry.dateIso);
-      if (date == null) return false;
-      return date.year == today.year &&
-          date.month == today.month &&
-          date.day == today.day;
-    });
-    if (index >= 0) {
-      updated[index] = WeightEntry(
-        dateIso: DateTime.now().toIso8601String(),
-        weightKg: weight,
-      );
-      return updated;
+  void _syncDirtyFlag(Profile profile) {
+    if (!_didInitFromProfile) return;
+    final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
+    final weight = double.tryParse(_weightController.text.trim()) ?? profile.weightKg;
+    final startTimerSeconds =
+        int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
+    final hasChanges = height != profile.heightCm ||
+        weight != profile.weightKg ||
+        startTimerSeconds.clamp(0, 60) != profile.startTimerSeconds;
+    if (hasChanges != _hasChanges && mounted) {
+      setState(() => _hasChanges = hasChanges);
     }
-    updated.add(
-      WeightEntry(
-        dateIso: DateTime.now().toIso8601String(),
-        weightKg: weight,
-      ),
-    );
-    return updated;
   }
 
   Widget _inputBlock({

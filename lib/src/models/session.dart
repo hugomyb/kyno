@@ -1,70 +1,82 @@
-class SessionSetLog {
-  SessionSetLog({
+class WorkoutSetLog {
+  WorkoutSetLog({
     required this.setIndex,
     required this.reps,
+    required this.seconds,
     required this.weight,
+    required this.loadType,
+    required this.loadMode,
     required this.rir,
   });
 
   final int setIndex;
   final int reps;
+  final int seconds;
   final double weight;
+  final String loadType;
+  final String loadMode;
   final int? rir;
 
   Map<String, dynamic> toJson() {
     return {
-      'setIndex': setIndex,
+      'set_index': setIndex,
       'reps': reps,
+      'seconds': seconds,
       'weight': weight,
+      'load_type': loadType,
+      'load_mode': loadMode,
       'rir': rir,
     };
   }
 
-  factory SessionSetLog.fromJson(Map<String, dynamic> json) {
-    return SessionSetLog(
-      setIndex: (json['setIndex'] as num?)?.toInt() ?? 0,
+  factory WorkoutSetLog.fromJson(Map<String, dynamic> json) {
+    return WorkoutSetLog(
+      setIndex: (json['set_index'] as num?)?.toInt() ?? 0,
       reps: (json['reps'] as num?)?.toInt() ?? 0,
+      seconds: (json['seconds'] as num?)?.toInt() ?? 0,
       weight: (json['weight'] as num?)?.toDouble() ?? 0,
+      loadType: (json['load_type'] as String?) ?? 'bodyweight',
+      loadMode: (json['load_mode'] as String?) ?? 'total',
       rir: (json['rir'] as num?)?.toInt(),
     );
   }
 }
 
-class SessionExerciseLog {
-  SessionExerciseLog({
+class WorkoutExerciseLog {
+  WorkoutExerciseLog({
     required this.exerciseId,
     required this.exerciseName,
     required this.sets,
   });
 
-  final String exerciseId;
+  final String? exerciseId;
   final String exerciseName;
-  final List<SessionSetLog> sets;
+  final List<WorkoutSetLog> sets;
 
   Map<String, dynamic> toJson() {
     return {
-      'exerciseId': exerciseId,
-      'exerciseName': exerciseName,
+      'exercise_id': exerciseId,
+      'exercise_name': exerciseName,
       'sets': sets.map((e) => e.toJson()).toList(),
     };
   }
 
-  factory SessionExerciseLog.fromJson(Map<String, dynamic> json) {
-    return SessionExerciseLog(
-      exerciseId: json['exerciseId'] as String,
-      exerciseName: (json['exerciseName'] as String?) ?? '',
+  factory WorkoutExerciseLog.fromJson(Map<String, dynamic> json) {
+    return WorkoutExerciseLog(
+      exerciseId: json['exercise_id'] as String?,
+      exerciseName: (json['exercise_name'] as String?) ?? '',
       sets: (json['sets'] as List?)
-              ?.map((e) => SessionSetLog.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => WorkoutSetLog.fromJson(e as Map<String, dynamic>))
               .toList() ??
-          <SessionSetLog>[],
+          <WorkoutSetLog>[],
     );
   }
 }
 
-class WorkoutSession {
-  WorkoutSession({
+class WorkoutSessionLog {
+  WorkoutSessionLog({
     required this.id,
-    required this.templateId,
+    required this.sessionId,
     required this.name,
     required this.dateIso,
     required this.durationMinutes,
@@ -72,21 +84,21 @@ class WorkoutSession {
   });
 
   final String id;
-  final String templateId;
+  final String? sessionId;
   final String name;
   final String dateIso;
   final int durationMinutes;
-  final List<SessionExerciseLog> exerciseLogs;
+  final List<WorkoutExerciseLog> exerciseLogs;
 
-  WorkoutSession copyWith({
+  WorkoutSessionLog copyWith({
     String? name,
     String? dateIso,
     int? durationMinutes,
-    List<SessionExerciseLog>? exerciseLogs,
+    List<WorkoutExerciseLog>? exerciseLogs,
   }) {
-    return WorkoutSession(
+    return WorkoutSessionLog(
       id: id,
-      templateId: templateId,
+      sessionId: sessionId,
       name: name ?? this.name,
       dateIso: dateIso ?? this.dateIso,
       durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -97,25 +109,28 @@ class WorkoutSession {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'templateId': templateId,
+      'session_id': sessionId,
       'name': name,
-      'dateIso': dateIso,
-      'durationMinutes': durationMinutes,
-      'exerciseLogs': exerciseLogs.map((e) => e.toJson()).toList(),
+      'date_iso': dateIso,
+      'duration_minutes': durationMinutes,
+      'exercises': exerciseLogs.map((e) => e.toJson()).toList(),
     };
   }
 
-  factory WorkoutSession.fromJson(Map<String, dynamic> json) {
-    return WorkoutSession(
+  factory WorkoutSessionLog.fromJson(Map<String, dynamic> json) {
+    return WorkoutSessionLog(
       id: json['id'] as String,
-      templateId: (json['templateId'] as String?) ?? '',
+      sessionId: json['session_id'] as String?,
       name: (json['name'] as String?) ?? '',
-      dateIso: (json['dateIso'] as String?) ?? '',
-      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 0,
-      exerciseLogs: (json['exerciseLogs'] as List?)
-              ?.map((e) => SessionExerciseLog.fromJson(e as Map<String, dynamic>))
+      dateIso: (json['date_iso'] as String?) ?? '',
+      durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 0,
+      exerciseLogs: (json['exercises'] as List?)
+              ?.map((e) => WorkoutExerciseLog.fromJson(e as Map<String, dynamic>))
               .toList() ??
-          <SessionExerciseLog>[],
+          (json['exercise_logs'] as List?)
+                  ?.map((e) => WorkoutExerciseLog.fromJson(e as Map<String, dynamic>))
+                  .toList() ??
+              <WorkoutExerciseLog>[],
     );
   }
 }
@@ -133,7 +148,7 @@ class ActiveWorkout {
     required this.paused,
   });
 
-  final WorkoutSession session;
+  final WorkoutSessionLog session;
   final int exerciseIndex;
   final int setIndex;
   final int restRemaining;
@@ -145,28 +160,30 @@ class ActiveWorkout {
 
   Map<String, dynamic> toJson() {
     return {
-      'session': session.toJson(),
-      'exerciseIndex': exerciseIndex,
-      'setIndex': setIndex,
-      'restRemaining': restRemaining,
-      'workRemaining': workRemaining,
-      'countdownRemaining': countdownRemaining,
-      'elapsedSeconds': elapsedSeconds,
-      'startedAtIso': startedAtIso,
+      'workout_session_id': session.id,
+      'exercise_index': exerciseIndex,
+      'set_index': setIndex,
+      'rest_remaining': restRemaining,
+      'work_remaining': workRemaining,
+      'countdown_remaining': countdownRemaining,
+      'elapsed_seconds': elapsedSeconds,
+      'started_at_iso': startedAtIso,
       'paused': paused,
     };
   }
 
   factory ActiveWorkout.fromJson(Map<String, dynamic> json) {
     return ActiveWorkout(
-      session: WorkoutSession.fromJson(json['session'] as Map<String, dynamic>),
-      exerciseIndex: (json['exerciseIndex'] as num?)?.toInt() ?? 0,
-      setIndex: (json['setIndex'] as num?)?.toInt() ?? 0,
-      restRemaining: (json['restRemaining'] as num?)?.toInt() ?? 0,
-      workRemaining: (json['workRemaining'] as num?)?.toInt() ?? 0,
-      countdownRemaining: (json['countdownRemaining'] as num?)?.toInt() ?? 0,
-      elapsedSeconds: (json['elapsedSeconds'] as num?)?.toInt() ?? 0,
-      startedAtIso: (json['startedAtIso'] as String?) ?? '',
+      session: WorkoutSessionLog.fromJson(
+        json['workout_session'] as Map<String, dynamic>,
+      ),
+      exerciseIndex: (json['exercise_index'] as num?)?.toInt() ?? 0,
+      setIndex: (json['set_index'] as num?)?.toInt() ?? 0,
+      restRemaining: (json['rest_remaining'] as num?)?.toInt() ?? 0,
+      workRemaining: (json['work_remaining'] as num?)?.toInt() ?? 0,
+      countdownRemaining: (json['countdown_remaining'] as num?)?.toInt() ?? 0,
+      elapsedSeconds: (json['elapsed_seconds'] as num?)?.toInt() ?? 0,
+      startedAtIso: (json['started_at_iso'] as String?) ?? '',
       paused: (json['paused'] as bool?) ?? false,
     );
   }

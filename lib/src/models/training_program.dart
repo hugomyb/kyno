@@ -1,5 +1,5 @@
-class Program {
-  Program({
+class TrainingProgram {
+  TrainingProgram({
     required this.id,
     required this.title,
     required this.notes,
@@ -11,13 +11,13 @@ class Program {
   final String notes;
   final List<ProgramDay> days;
 
-  factory Program.fromJson(Map<String, dynamic> json) {
-    return Program(
+  factory TrainingProgram.fromJson(Map<String, dynamic> json) {
+    return TrainingProgram(
       id: json['id'] as String,
-      title: (json['title'] as String?) ?? 'Programme',
+      title: (json['title'] as String?) ?? '',
       notes: (json['notes'] as String?) ?? '',
       days: (json['days'] as List?)
-              ?.map((e) => ProgramDay.fromJson(e as Map<String, dynamic>))
+              ?.map((d) => ProgramDay.fromJson(d as Map<String, dynamic>))
               .toList() ??
           <ProgramDay>[],
     );
@@ -28,8 +28,21 @@ class Program {
       'id': id,
       'title': title,
       'notes': notes,
-      'days': days.map((e) => e.toJson()).toList(),
+      'days': days.map((d) => d.toJson()).toList(),
     };
+  }
+
+  TrainingProgram copyWith({
+    String? title,
+    String? notes,
+    List<ProgramDay>? days,
+  }) {
+    return TrainingProgram(
+      id: id,
+      title: title ?? this.title,
+      notes: notes ?? this.notes,
+      days: days ?? this.days,
+    );
   }
 }
 
@@ -62,5 +75,17 @@ class ProgramDay {
       'session_id': sessionId,
       'order_index': orderIndex,
     };
+  }
+
+  ProgramDay copyWith({
+    String? sessionId,
+    int? orderIndex,
+  }) {
+    return ProgramDay(
+      id: id,
+      dayOfWeek: dayOfWeek,
+      sessionId: sessionId ?? this.sessionId,
+      orderIndex: orderIndex ?? this.orderIndex,
+    );
   }
 }

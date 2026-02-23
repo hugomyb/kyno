@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'src/app/router.dart';
-import 'src/providers/app_state_provider.dart';
+import 'src/providers/service_providers.dart';
 import 'src/services/storage_service.dart';
 
 Future<void> main() async {
@@ -19,14 +19,15 @@ Future<void> main() async {
   );
 }
 
-class KynoApp extends StatelessWidget {
+class KynoApp extends ConsumerWidget {
   const KynoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'Kyno Muscu Maison',
-      routerConfig: appRouter,
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
