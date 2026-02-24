@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../services/workout_ui_state.dart';
 import '../ui/screens/home_screen.dart';
+import '../ui/screens/exercise_history_screen.dart';
 import '../ui/screens/exercises_screen.dart';
 import '../ui/screens/login_screen.dart';
 import '../ui/screens/program_screen.dart';
+import '../ui/screens/program_sharing_screen.dart';
 import '../ui/screens/profile_screen.dart';
 import '../ui/screens/session_editor_screen.dart';
 import '../ui/screens/sessions_screen.dart';
@@ -30,6 +32,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/exercises',
         builder: (context, state) => const ExercisesScreen(),
+      ),
+      GoRoute(
+        path: '/exercises/:id/history',
+        builder: (context, state) => ExerciseHistoryScreen(
+          exerciseId: state.pathParameters['id']!,
+          exerciseName: state.uri.queryParameters['name'] ?? 'Exercice',
+        ),
+      ),
+      GoRoute(
+        path: '/program/sharing',
+        builder: (context, state) => const ProgramSharingScreen(),
       ),
       GoRoute(
         path: '/sessions/new',
@@ -87,11 +100,12 @@ class NavScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+
     return ValueListenableBuilder<bool>(
       valueListenable: workoutActive,
       builder: (context, isActive, _) {
         return Scaffold(
-          body: SafeArea(child: child),
+          body: child,
           bottomNavigationBar: isActive
               ? null
               : SafeArea(
@@ -99,11 +113,11 @@ class NavScaffold extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF17203A).withValues(alpha: 0.85),
+                      color: const Color(0xFF17203A).withValues(alpha: 0.98),
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF17203A).withValues(alpha: 0.35),
+                          color: const Color(0xFF17203A).withValues(alpha: 0.5),
                           blurRadius: 24,
                           offset: const Offset(0, 12),
                         ),
@@ -161,14 +175,21 @@ class _NavPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF2C3550) : Colors.transparent,
+            color: selected
+                ? (isDark
+                    ? const Color(0xFF334155).withValues(alpha: 0.6)
+                    : const Color(0xFF3B82F6).withValues(alpha: 0.15))
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -176,15 +197,21 @@ class _NavPill extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                size: 24,
+                color: selected
+                    ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF3B82F6))
+                    : Colors.white.withValues(alpha: 0.6),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                  color: selected
+                      ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF3B82F6))
+                      : Colors.white.withValues(alpha: 0.6),
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ],

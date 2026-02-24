@@ -65,7 +65,6 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.themeColors;
     final exercises = ref.watch(appDataProvider).exercises;
 
     return Scaffold(
@@ -94,34 +93,27 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
         children: [
           const AppBackground(),
           SafeArea(
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-              itemCount: _groups.length + 1,
-              onReorder: (oldIndex, newIndex) {
-                if (oldIndex == 0 || newIndex == 0) return;
-                setState(() {
-                  if (newIndex > oldIndex) newIndex -= 1;
-                  final item = _groups.removeAt(oldIndex - 1);
-                  _groups.insert(newIndex - 1, item);
-                  final flag = _groupIsCircuit.removeAt(oldIndex - 1);
-                  _groupIsCircuit.insert(newIndex - 1, flag);
-                });
-              },
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Container(
-                    key: const ValueKey('info-card'),
-                    margin: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: colors.cardBackground,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: colors.border.withValues(alpha: 0.5),
-                        width: 1,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEFF4FF), Color(0xFFF8FAFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      boxShadow: colors.cardShadow,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFD7E3FF)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,26 +123,26 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: colors.chipBackground(colors.primary),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.edit_note, color: colors.primary),
+                              child: const Icon(Icons.edit_note, color: Color(0xFF2563EB)),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                                children: const [
                                   Text('Informations',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
-                                        color: colors.textPrimary,
+                                        color: Color(0xFF0F172A),
                                       )),
-                                  const SizedBox(height: 2),
+                                  SizedBox(height: 2),
                                   Text(
                                     'Nom de la séance + notes',
-                                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                                   ),
                                 ],
                               ),
@@ -169,31 +161,48 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                         ),
                       ],
                     ),
-                  );
-                }
-                final groupIndex = index - 1;
-                final group = _groups[groupIndex];
-                return Dismissible(
-                  key: ValueKey('group-${group.orderIndex}-$groupIndex'),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (_) => _confirmDeleteBlock(context),
-                  onDismissed: (_) => setState(() {
-                    _groups.removeAt(groupIndex);
-                    _groupIsCircuit.removeAt(groupIndex);
-                  }),
-                  background: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(Icons.delete, color: Color(0xFFEF4444)),
                   ),
-                  child: _blockCard(group, groupIndex, exercises),
-                );
-              },
+                ),
+                Expanded(
+                  child: ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                    itemCount: _groups.length,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final item = _groups.removeAt(oldIndex);
+                        _groups.insert(newIndex, item);
+                        final flag = _groupIsCircuit.removeAt(oldIndex);
+                        _groupIsCircuit.insert(newIndex, flag);
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final group = _groups[index];
+                      return Dismissible(
+                        key: ValueKey('group-${group.orderIndex}-$index'),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _confirmDeleteBlock(context),
+                        onDismissed: (_) => setState(() {
+                          _groups.removeAt(index);
+                          _groupIsCircuit.removeAt(index);
+                        }),
+                        background: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          alignment: Alignment.centerRight,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.delete, color: Color(0xFFEF4444)),
+                        ),
+                        child: _blockCard(group, index, exercises),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -202,19 +211,21 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
   }
 
   Widget _blockCard(SessionGroup group, int index, List<Exercise> exercises) {
-    final colors = context.themeColors;
     final isCircuit = _groupIsCircuit[index];
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.cardBackground,
+        color: isCircuit ? const Color(0xFFF4F7FF) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.5),
-          width: 1,
-        ),
-        boxShadow: colors.cardShadow,
+        border: Border.all(color: isCircuit ? const Color(0xFFD7E3FF) : const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -227,20 +238,20 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: colors.chipBackground(colors.primary),
+                    color: isCircuit ? const Color(0xFFDBE7FF) : const Color(0xFFEFF4FF),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     isCircuit ? 'Circuit ${index + 1}' : 'Exercice ${index + 1}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: colors.primary,
+                      color: Color(0xFF2563EB),
                     ),
                   ),
                 ),
                 const Spacer(),
                 ReorderableDragStartListener(
-                  index: index + 1,
+                  index: index,
                   child: const Icon(Icons.drag_handle),
                 ),
               ],
@@ -254,11 +265,10 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
   }
 
   List<Widget> _singleSummary(SessionGroup group) {
-    final colors = context.themeColors;
     final exercise = group.exercises.isEmpty ? null : group.exercises.first;
     if (exercise == null) {
       return [
-        Text('Exercice non défini', style: TextStyle(color: colors.textSecondary)),
+        const Text('Exercice non défini', style: TextStyle(color: Color(0xFF64748B))),
       ];
     }
     final name = exercise.exercise?.name ??
@@ -271,7 +281,7 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
         : '${formatDecimalFr(exercise.loadValue)} kg ${exercise.loadMode == 'per_hand' ? '/main' : 'total'}';
 
     return [
-      Text(name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colors.textPrimary)),
+      Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 6),
       Wrap(
         spacing: 8,
@@ -290,15 +300,14 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
   }
 
   List<Widget> _circuitSummary(SessionGroup group) {
-    final colors = context.themeColors;
     return [
       Row(
         children: [
-          Icon(Icons.autorenew, size: 16, color: colors.primary),
+          const Icon(Icons.autorenew, size: 16, color: Color(0xFF2563EB)),
           const SizedBox(width: 6),
           Text(
             'Circuit — ${group.rounds} tours',
-            style: TextStyle(fontWeight: FontWeight.w700, color: colors.textPrimary),
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 8),
           _badgePill(Icons.timer, '${group.restBetweenRoundsSeconds}s repos'),
@@ -313,7 +322,7 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
             children: [
               Text(
                 exercise.exercise?.name ?? 'Exercice',
-                style: TextStyle(color: colors.textSecondary),
+                style: const TextStyle(color: Color(0xFF334155)),
               ),
               const SizedBox(height: 4),
               Wrap(
@@ -339,25 +348,24 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
   }
 
   Widget _badgePill(IconData icon, String label) {
-    final colors = context.themeColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: colors.cardBackgroundAlt,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: const Color(0xFFD7E3FF)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: colors.primary),
+          Icon(icon, size: 12, color: const Color(0xFF2563EB)),
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: colors.primary,
+              color: Color(0xFF2563EB),
             ),
           ),
         ],
@@ -445,15 +453,14 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
     required IconData icon,
     required String value,
   }) {
-    final colors = context.themeColors;
     return InkWell(
       onTap: () => Navigator.of(context).pop(value),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.border),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
         child: Row(
           children: [
@@ -461,19 +468,19 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: colors.chipBackground(colors.primary),
+                color: const Color(0xFFEFF4FF),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: colors.primary),
+              child: Icon(icon, color: const Color(0xFF2563EB)),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: colors.textPrimary)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: colors.textSecondary)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF64748B))),
                 ],
               ),
             ),
@@ -550,13 +557,12 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        final colors = context.themeColors;
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              decoration: BoxDecoration(
-                color: colors.cardBackgroundAlt,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F7FF),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Padding(
                 padding: EdgeInsets.only(
@@ -575,10 +581,10 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                         Center(
                           child: Text(
                             'Circuit',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: colors.textPrimary,
+                              color: Color(0xFF0F172A),
                             ),
                           ),
                         ),
@@ -586,17 +592,17 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                         Center(
                           child: Text(
                             '${localGroup.rounds} tours • ${localGroup.restBetweenRoundsSeconds}s repos',
-                            style: TextStyle(color: colors.textSecondary),
+                            style: const TextStyle(color: Color(0xFF64748B)),
                           ),
                         ),
                       ] else ...[
                         Center(
                           child: Text(
                             'Exercice',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: colors.textPrimary,
+                              color: Color(0xFF0F172A),
                             ),
                           ),
                         ),
@@ -604,25 +610,25 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                         Center(
                           child: Text(
                             '${localGroup.rounds} séries • ${localGroup.restBetweenRoundsSeconds}s repos',
-                            style: TextStyle(color: colors.textSecondary),
+                            style: const TextStyle(color: Color(0xFF64748B)),
                           ),
                         ),
                       ],
                       if (isCircuit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 6),
                           child: Text(
                             'Les exercices s’enchaînent. Repos à la fin du tour.',
-                            style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
                         ),
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: colors.cardBackground,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: colors.border),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
                         ),
                         child: Row(
                           children: [
@@ -691,23 +697,23 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                         child: ListView(
                           children: [
                             if (isCircuit) ...[
-                              Text(
+                              const Text(
                                 'Circuit',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: colors.textPrimary),
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 6),
-                              Text(
+                              const Text(
                                 'Ajoute autant d’exercices que tu veux, puis règle les détails ici.',
-                                style: TextStyle(color: colors.textSecondary),
+                                style: TextStyle(color: Color(0xFF64748B)),
                               ),
                               const SizedBox(height: 12),
                               if (localGroup.exercises.isEmpty) ...[
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: colors.cardBackground,
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: colors.border),
+                                    border: Border.all(color: const Color(0xFFE5E7EB)),
                                   ),
                                   child: Column(
                                     children: [
@@ -942,7 +948,6 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
     void Function(String, String) setCtrl, {
     required void Function(SessionExerciseConfig) onChanged,
   }) {
-    final colors = context.themeColors;
     final exercise = group.exercises.first;
     final selected = exercise.exerciseId.isEmpty
         ? Exercise(id: '', name: 'Exercice', categories: const <String>[], userId: null)
@@ -985,9 +990,9 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
           },
         ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Objectif',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.textSecondary),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -1038,9 +1043,9 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
           },
         ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Charge',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.textSecondary),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -1155,14 +1160,13 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
       ),
     );
 
-    final colors = context.themeColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colors.cardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,15 +1176,15 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colors.chipBackground(colors.primary),
+                  color: const Color(0xFFEFF4FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   'Exercice ${index + 1}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: colors.primary,
+                    color: Color(0xFF2563EB),
                   ),
                 ),
               ),
@@ -1222,9 +1226,9 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
               },
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Objectif',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.textSecondary),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -1275,9 +1279,9 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
               },
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Charge',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.textSecondary),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -1364,7 +1368,6 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
     Exercise selected, {
     required void Function(Exercise) onPicked,
   }) {
-    final colors = context.themeColors;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: exercises.isEmpty
@@ -1386,7 +1389,7 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
               child: Text(
                 selected.name.isEmpty ? 'Sélectionner un exercice' : selected.name,
                 style: TextStyle(
-                  color: selected.name.isEmpty ? colors.textTertiary : colors.textPrimary,
+                  color: selected.name.isEmpty ? const Color(0xFF94A3B8) : null,
                 ),
               ),
             ),
@@ -1409,7 +1412,6 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        final colors = context.themeColors;
         return StatefulBuilder(
           builder: (context, setModalState) {
             final query = controller.text.trim().toLowerCase();
@@ -1449,7 +1451,7 @@ class _SessionEditorScreenState extends ConsumerState<SessionEditorScreen> {
                           return ListTile(
                             title: Text(exercise.name),
                             trailing: isSelected
-                                ? Icon(Icons.check, color: colors.primary)
+                                ? const Icon(Icons.check, color: Color(0xFF2563EB))
                                 : null,
                             onTap: () => Navigator.of(context).pop(exercise),
                           );

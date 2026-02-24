@@ -29,4 +29,12 @@ class StorageService {
   Future<void> clearAuthToken() async {
     await _box.delete(authTokenKey);
   }
+
+  String? getString(String key) {
+    return _box.get(key);
+  }
+
+  Future<void> setString(String key, String value) async {
+    await _box.put(key, value);
+  }
 }

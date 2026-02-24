@@ -5,27 +5,26 @@ class AppBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(color: const Color(0xFFD5DDF1)),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFE1E7F6),
-                    Color(0xFFD0D9F0),
-                    Color(0xFFE6ECF8),
-                  ],
-                ),
-              ),
-            ),
-          ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  const Color(0xFF0F172A),
+                  const Color(0xFF1E293B),
+                  const Color(0xFF0F172A),
+                ]
+              : [
+                  const Color(0xFFF8FAFC),
+                  const Color(0xFFEFF6FF),
+                  const Color(0xFFF1F5F9),
+                ],
         ),
-      ],
+      ),
     );
   }
 }

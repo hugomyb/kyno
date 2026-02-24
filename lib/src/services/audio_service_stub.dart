@@ -7,6 +7,11 @@ class AudioService {
 
   late final AudioPlayer _player;
 
+  /// Unlock audio context (no-op on non-web platforms)
+  Future<void> unlock() async {
+    // No-op on native platforms
+  }
+
   Future<void> playBeep() async {
     try {
       await _player.stop();

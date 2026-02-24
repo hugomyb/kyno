@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../models/program.dart';
 import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
+import '../../utils/number_format.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
+import '../widgets/custom_app_bar.dart';
 
 class ProgramScreen extends ConsumerStatefulWidget {
   const ProgramScreen({super.key});
@@ -17,30 +20,52 @@ class ProgramScreen extends ConsumerStatefulWidget {
 class _ProgramScreenState extends ConsumerState<ProgramScreen> {
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final state = ref.watch(appDataProvider);
     final program = state.program;
     final sessions = state.sessions;
     final today = DateTime.now().weekday;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Programme')),
+      appBar: CustomAppBar(
+        title: 'Programme',
+        subtitle: 'Votre plan d\'entraînement',
+      ),
       body: Stack(
         children: [
           const AppBackground(),
           SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: colors.isDark
+                          ? [
+                              const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                              const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                            ]
+                          : [
+                              const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                              const Color(0xFFA78BFA).withValues(alpha: 0.05),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: colors.isDark
+                          ? const Color(0xFF8B5CF6).withValues(alpha: 0.3)
+                          : const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 18,
+                        color: const Color(0xFF8B5CF6).withValues(alpha: colors.isDark ? 0.2 : 0.1),
+                        blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
                     ],
@@ -48,31 +73,86 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Programme',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              Icons.calendar_month,
+                              color: colors.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Votre programme',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: colors.textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${sessions.length} séances disponibles',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${sessions.length} séances disponibles',
-                        style: const TextStyle(color: Color(0xFF64748B)),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () => context.push('/sessions'),
-                          icon: const Icon(Icons.list_alt, size: 18),
-                          label: const Text('Mes séances'),
-                        ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: () => context.push('/sessions'),
+                              icon: const Icon(Icons.list_alt, size: 20),
+                              label: const Text('Mes séances', style: TextStyle(fontWeight: FontWeight.w700)),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton.icon(
+                            onPressed: () => context.push('/program/sharing'),
+                            icon: const Icon(Icons.share, size: 20),
+                            label: const Text('Partager', style: TextStyle(fontWeight: FontWeight.w700)),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                              backgroundColor: const Color(0xFF10B981),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
                 for (var day = 1; day <= 7; day++) ...[
                   _dayCard(context, program, sessions, day, today == day),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                 ],
               ],
             ),
@@ -109,18 +189,28 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
       (sum, group) => sum + group.exercises.length,
     );
 
+    final colors = context.themeColors;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isToday
+              ? colors.primary.withValues(alpha: 0.3)
+              : colors.border.withValues(alpha: 0.5),
+          width: isToday ? 2 : 1,
+        ),
+        boxShadow: isToday
+            ? [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.15),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : colors.cardShadow,
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -134,20 +224,23 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
                 children: [
                   Text(
                     _dayLabel(day),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: colors.textPrimary,
+                    ),
                   ),
                   if (isToday) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
+                        color: colors.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Aujourd’hui',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colors.isDark ? colors.textPrimary : Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -159,12 +252,12 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
               const SizedBox(height: 2),
               Text(
                 currentSessionId.isEmpty ? 'Repos' : (selectedSession?.name ?? 'Séance'),
-                style: const TextStyle(color: Color(0xFF64748B)),
+                style: TextStyle(color: colors.textSecondary),
               ),
               const SizedBox(height: 4),
               Text(
                 '$exercisesCount exercices',
-                style: const TextStyle(color: Color(0xFF64748B)),
+                style: TextStyle(color: colors.textSecondary),
               ),
             ],
           ),
@@ -174,9 +267,9 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
           ),
           children: [
             if (exercisesCount == 0)
-              const Text(
+              Text(
                 'Aucun exercice.',
-                style: TextStyle(color: Color(0xFF64748B)),
+                style: TextStyle(color: colors.textSecondary),
               ),
             if (exercisesCount > 0)
               Column(
@@ -212,12 +305,13 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
   }
 
   Widget _singleBlock(int blockIndex, SessionGroup group, SessionExerciseConfig exercise) {
+    final colors = context.themeColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,14 +321,14 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF4FF),
+                  color: colors.chipBackground(colors.primary),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'Exercice $blockIndex',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF2563EB),
+                    color: colors.primary,
                   ),
                 ),
               ),
@@ -248,12 +342,13 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
   }
 
   Widget _circuitBlock(int blockIndex, SessionGroup group) {
+    final colors = context.themeColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FF),
+        color: colors.cardBackgroundAlt,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD7E3FF)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,24 +358,25 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDBE7FF),
+                  color: colors.chipBackground(colors.primary),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'Circuit $blockIndex',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF2563EB),
+                    color: colors.primary,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               _badgePill(
+                context,
                 Icons.repeat,
                 '${group.rounds} ${group.rounds == 1 ? 'tour' : 'tours'}',
               ),
               const SizedBox(width: 8),
-              _badgePill(Icons.timer, '${group.restBetweenRoundsSeconds}s repos'),
+              _badgePill(context, Icons.timer, '${group.restBetweenRoundsSeconds}s repos'),
             ],
           ),
           const SizedBox(height: 10),
@@ -289,7 +385,7 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
               for (var i = 0; i < group.exercises.length; i++) ...[
                 _exerciseRow(i + 1, group, group.exercises[i]),
                 if (i != group.exercises.length - 1)
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                  Divider(height: 20, color: colors.border),
               ],
             ],
           ),
@@ -373,6 +469,9 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
     SessionExerciseConfig exercise, {
     bool showIndex = true,
   }) {
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
     final name = exercise.exercise?.name ?? 'Exercice';
     final target = exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
     final rest = '${group.restBetweenRoundsSeconds}s';
@@ -381,72 +480,84 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
         : '${group.rounds} ${group.rounds == 1 ? 'série' : 'séries'}';
     final load = exercise.loadType == 'bodyweight'
         ? 'PDC'
-        : '${exercise.loadValue}kg ${exercise.loadMode == 'per_hand' ? '/main' : 'total'}';
+        : '${formatDecimalFr(exercise.loadValue)}kg ${exercise.loadMode == 'per_hand' ? '/main' : 'total'}';
     final isCircuit = group.exercises.length > 1;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showIndex) ...[
-          Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE7EEFF),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFD7E3FF)),
-            ),
-            child: Text(
-              '$index',
-              style:
-                  const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2F5FE3), fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showIndex) ...[
+              Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.chipBackground(colors.primary),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.border),
+                ),
+                child: Text(
+                  '$index',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: colors.primary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!isCircuit) _badgePill(Icons.repeat, sets),
-                  _badgePill(Icons.fitness_center, target),
-                  if (!isCircuit) _badgePill(Icons.timer, rest),
-                  _badgePill(Icons.scale, load),
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (!isCircuit) _badgePill(context, Icons.repeat, sets),
+                      _badgePill(context, Icons.fitness_center, target),
+                      if (!isCircuit) _badgePill(context, Icons.timer, rest),
+                      _badgePill(context, Icons.scale, load),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _badgePill(IconData icon, String label) {
+  Widget _badgePill(BuildContext context, IconData icon, String label) {
+    final colors = context.themeColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7EEFF),
+        color: colors.chipBackground(colors.primary),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7E3FF)),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: const Color(0xFF2F5FE3)),
+          Icon(icon, size: 12, color: colors.primary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF2F5FE3),
+              color: colors.primary,
             ),
           ),
         ],

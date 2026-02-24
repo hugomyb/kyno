@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/exercise.dart';
 import '../../providers/app_data_provider.dart';
 import '../../services/api_exceptions.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
+import '../widgets/custom_app_bar.dart';
 
 enum ExerciseFilter { all, mine, global }
 
@@ -45,7 +48,14 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
     final totalCount = query.isEmpty ? exercises.length : baseList.length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Exercices')),
+      appBar: CustomAppBar(
+        title: 'Exercices',
+        subtitle: '${exercises.length} exercice${exercises.length > 1 ? 's' : ''}',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddSheet(context),
         icon: const Icon(Icons.add),
@@ -59,7 +69,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -80,9 +90,9 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
                                   ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         _filterRow(),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         if (_searching)
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
@@ -100,10 +110,10 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
                 ),
                 if (filtered.isNotEmpty)
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList.separated(
                       itemBuilder: (context, index) => _exerciseCard(filtered[index]),
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemCount: filtered.length,
                     ),
                   ),
@@ -167,15 +177,18 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
   }
 
   Widget _filterChip(ExerciseFilter filter, String label) {
+    final colors = context.themeColors;
     final selected = _filter == filter;
     return SizedBox(
       height: 44,
       child: OutlinedButton(
         onPressed: () => setState(() => _filter = filter),
         style: OutlinedButton.styleFrom(
-          backgroundColor: selected ? const Color(0xFF2563EB) : Colors.white,
-          foregroundColor: selected ? Colors.white : const Color(0xFF1F2937),
-          side: BorderSide(color: selected ? const Color(0xFF2563EB) : const Color(0xFFD0D9F0)),
+          backgroundColor: selected ? colors.primary : colors.cardBackground,
+          foregroundColor: selected
+              ? (colors.isDark ? colors.textPrimary : Colors.white)
+              : colors.textPrimary,
+          side: BorderSide(color: selected ? colors.primary : colors.border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -184,64 +197,119 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
   }
 
   Widget _summaryRow(int count, int total) {
+    final colors = context.themeColors;
     return Row(
       children: [
         Text(
           '$count / $total exercices',
-          style: const TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: colors.textSecondary),
         ),
       ],
     );
   }
 
   Widget _exerciseCard(Exercise exercise) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.fitness_center, size: 26),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(exercise.name,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  if (exercise.categories.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: exercise.categories.take(4).map(
-                        (category) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF4FF),
-                              borderRadius: BorderRadius.circular(12),
+    final colors = context.themeColors;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: colors.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: colors.chipBackground(colors.primary),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              Icons.fitness_center,
+              color: colors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.name,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (exercise.categories.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: exercise.categories.take(4).map(
+                      (category) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: colors.chipBackground(colors.primary),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            category,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.primary,
                             ),
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
-                            ),
-                          );
-                        },
-                      ).toList(),
-                    ),
-                  ],
+                          ),
+                        );
+                      },
+                    ).toList(),
+                  ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: colors.chipBackground(colors.primary),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.history_outlined),
+              color: colors.primary,
+              tooltip: 'Voir l\'historique',
+              onPressed: () => context.push(
+                '/exercises/${exercise.id}/history?name=${Uri.encodeComponent(exercise.name)}',
               ),
             ),
-            if (!exercise.isGlobal)
-              IconButton(
-                icon: const Icon(Icons.delete),
+          ),
+          if (!exercise.isGlobal) ...[
+            const SizedBox(width: 4),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: const Color(0xFFEF4444),
                 onPressed: () =>
                     ref.read(appDataProvider.notifier).removeExercise(exercise.id),
               ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

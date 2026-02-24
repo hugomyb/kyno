@@ -10,7 +10,9 @@ import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
 import '../../services/audio_service.dart';
 import '../../services/workout_ui_state.dart';
+import '../../utils/number_format.dart';
 import '../theme/app_colors.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/soft_card.dart';
 
@@ -23,13 +25,15 @@ class WorkoutStep {
     required this.type,
     required this.title,
     required this.durationSeconds,
+    this.isCircuitExercise = false,
     this.exercise,
     this.subtitle,
     this.round,
     this.totalRounds,
     this.setIndex,
     this.totalSets,
-    this.circuitExercises,
+    this.circuitIndex,
+    this.circuitTotal,
   });
 
   final WorkoutStepType type;
@@ -41,10 +45,11 @@ class WorkoutStep {
   final int? totalRounds;
   final int? setIndex;
   final int? totalSets;
-  final List<SessionExerciseConfig>? circuitExercises;
+  final bool isCircuitExercise;
+  final int? circuitIndex;
+  final int? circuitTotal;
 
   bool get isTimedExercise => type == WorkoutStepType.exercise && durationSeconds > 0;
-  bool get isCircuitRound => circuitExercises != null && circuitExercises!.isNotEmpty;
 }
 
 class WorkoutScreen extends ConsumerStatefulWidget {
@@ -172,22 +177,29 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   }
 
   Widget _recapView(TrainingSessionTemplate session) {
-    return Center(
-      key: const ValueKey('recap'),
-      child: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-            child: SoftCard(
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    session.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+
+        return Center(
+          key: const ValueKey('recap'),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                child: SoftCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        session.name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -206,29 +218,31 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
               ),
             ),
           ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 16,
-            child: SafeArea(
-              child: SizedBox(
-                height: 56,
-                child: FilledButton(
-                  onPressed: _startFromRecap,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.play_arrow, size: 20),
-                      SizedBox(width: 8),
-                      Text('Démarrer'),
-                    ],
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16,
+                child: SafeArea(
+                  child: SizedBox(
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: _startFromRecap,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.play_arrow, size: 20),
+                          SizedBox(width: 8),
+                          Text('Démarrer'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -241,104 +255,95 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         durationSeconds: 0,
       ),
     );
-    final isCircuit = firstExercise.isCircuitRound;
-    final accent = const Color(0xFF3B82F6);
+    final isCircuit = firstExercise.isCircuitExercise;
 
-    return Center(
-      key: const ValueKey('countdown'),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 12),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                  ),
-                  child: const Text(
-                    'Début de séance',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        final accent = colors.primary;
+
+        return Center(
+          key: const ValueKey('countdown'),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 12),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colors.chipBackground(colors.primary),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: colors.border),
+                      ),
+                      child: Text(
+                        'Début de séance',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: SoftCard(
-                  color: backgroundColorLight,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Prêt ?',
-                            style: TextStyle(
-                              color: accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        isCircuit ? 'Circuit' : firstExercise.title,
-                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 14),
-                      if (isCircuit && firstExercise.circuitExercises != null) ...[
-                        Column(
-                          children: [
-                            for (final exercise in firstExercise.circuitExercises!)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      exercise.exercise?.name ?? 'Exercice',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Color(0xFF334155),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      alignment: WrapAlignment.center,
-                                      spacing: 8,
-                                      runSpacing: 6,
-                                      children: _circuitExerciseBadges(exercise),
-                                    ),
-                                  ],
+                Expanded(
+                  child: Center(
+                    child: SoftCard(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Align(
+                            alignment: Alignment.center,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: colors.chipBackground(accent),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Prêt ?',
+                                style: TextStyle(
+                                  color: accent,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                          ],
-                        ),
-                      ] else if (firstExercise.subtitle != null) ...[
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            firstExercise.title,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                      const SizedBox(height: 14),
+                      if (firstExercise.subtitle != null) ...[
                         Wrap(
                           alignment: WrapAlignment.center,
                           spacing: 8,
                           runSpacing: 6,
                           children: [
+                            if (isCircuit && firstExercise.round != null && firstExercise.totalRounds != null)
+                              _infoPill(
+                                icon: Icons.autorenew,
+                                label: 'Tour ${firstExercise.round}/${firstExercise.totalRounds}',
+                              ),
+                            if (isCircuit &&
+                                firstExercise.circuitIndex != null &&
+                                firstExercise.circuitTotal != null)
+                              _infoPill(
+                                icon: Icons.format_list_numbered,
+                                label:
+                                    'Exercice ${firstExercise.circuitIndex}/${firstExercise.circuitTotal}',
+                              ),
                             _infoPill(
                               icon: firstExercise.isTimedExercise
                                   ? Icons.timer_outlined
@@ -347,12 +352,33 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                             ),
                           ],
                         ),
+                      ] else if (isCircuit &&
+                          firstExercise.round != null &&
+                          firstExercise.totalRounds != null) ...[
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _infoPill(
+                              icon: Icons.autorenew,
+                              label: 'Tour ${firstExercise.round}/${firstExercise.totalRounds}',
+                            ),
+                            if (firstExercise.circuitIndex != null &&
+                                firstExercise.circuitTotal != null)
+                              _infoPill(
+                                icon: Icons.format_list_numbered,
+                                label:
+                                    'Exercice ${firstExercise.circuitIndex}/${firstExercise.circuitTotal}',
+                              ),
+                          ],
+                        ),
                       ],
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
+                          color: colors.chipBackground(accent),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Text(
@@ -373,6 +399,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
@@ -393,26 +421,37 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     );
     final totalExercises = completed.exerciseLogs.length;
     final duration = completed.durationMinutes;
-    return Center(
-      key: const ValueKey('summary'),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: SoftCard(
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Séance terminée',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                completed.name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-              ),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+
+        return Center(
+          key: const ValueKey('summary'),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SoftCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Séance terminée',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    completed.name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
               const SizedBox(height: 12),
               Wrap(
                 alignment: WrapAlignment.center,
@@ -465,6 +504,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ),
         ),
       ),
+        );
+      },
     );
   }
 
@@ -472,10 +513,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     final step = _steps[_currentStepIndex];
     final isRest = step.type == WorkoutStepType.rest;
     final isTimed = step.isTimedExercise || isRest;
-    final accent = isRest ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6);
     final nextExercise = _nextExerciseStep();
+    final nextCircuitSteps = nextExercise != null && nextExercise.isCircuitExercise
+        ? _collectCircuitRoundSteps(_currentStepIndex + 1)
+        : const <WorkoutStep>[];
+    final nextCircuitExercise = _nextCircuitExercise(step);
     final restExerciseName = isRest ? _previousExerciseName() : null;
-    final isCircuitRound = step.isCircuitRound;
+    final isCircuitExercise = step.isCircuitExercise;
     final showNextExercise = isRest &&
         step.type == WorkoutStepType.rest &&
         ((step.setIndex != null &&
@@ -483,37 +527,43 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                 step.setIndex == step.totalSets) ||
             (step.round != null && step.totalRounds != null && step.round == step.totalRounds));
 
-    return Padding(
-      key: const ValueKey('running'),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 12),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                ),
-                child: Text(
-                  _formatElapsed(_elapsedSeconds),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.4,
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        final accent = isRest
+            ? (colors.isDark ? const Color(0xFFFBBF24) : const Color(0xFFF59E0B))
+            : colors.primary;
+
+        return Padding(
+          key: const ValueKey('running'),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 12),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      _formatElapsed(_elapsedSeconds),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                   ),
-                ),
-              ),
             ),
           ),
           Expanded(
             child: Center(
               child: SoftCard(
-                color: backgroundColorLight,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -527,7 +577,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          isRest ? 'Repos' : 'Travail',
+                          isRest
+                              ? 'Repos'
+                              : (step.isCircuitExercise ? 'Circuit' : 'Exercice'),
                           style: TextStyle(
                             color: accent,
                             fontWeight: FontWeight.w700,
@@ -538,7 +590,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                     const SizedBox(height: 12),
                     Text(
                       isRest ? (restExerciseName ?? step.title) : step.title,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 14),
@@ -552,7 +608,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                             icon: Icons.autorenew,
                             label: 'Tour ${step.round}/${step.totalRounds}',
                           ),
-                        if (!isCircuitRound && step.setIndex != null && step.totalSets != null)
+                        if (isCircuitExercise &&
+                            step.circuitIndex != null &&
+                            step.circuitTotal != null)
+                          _infoPill(
+                            icon: Icons.format_list_numbered,
+                            label: 'Exercice ${step.circuitIndex}/${step.circuitTotal}',
+                          ),
+                        if (!isCircuitExercise && step.setIndex != null && step.totalSets != null)
                           _infoPill(
                             icon: Icons.repeat,
                             label: 'Série ${step.setIndex}/${step.totalSets}',
@@ -564,6 +627,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                           ),
                       ],
                     ),
+                    if (!isRest && step.exercise != null) ...[
+                      const SizedBox(height: 12),
+                      if (_getLastPerformance(step.exercise!.exerciseId) != null)
+                        _lastPerformancePill(_getLastPerformance(step.exercise!.exerciseId)!),
+                    ],
                     const SizedBox(height: 16),
                     if (isTimed)
                       Container(
@@ -582,43 +650,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                    if (isCircuitRound) ...[
-                      const SizedBox(height: 8),
-                      Column(
-                        children: [
-                          for (final exercise in step.circuitExercises!)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    exercise.exercise?.name ?? 'Exercice',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFF334155),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Wrap(
-                                    alignment: WrapAlignment.center,
-                                    spacing: 8,
-                                    runSpacing: 6,
-                                    children: _circuitExerciseBadges(exercise),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
                     if (nextExercise != null && showNextExercise) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.cardBackgroundAlt,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: accent.withValues(alpha: 0.2),
@@ -645,38 +682,52 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              nextExercise.title,
-                              style: const TextStyle(
+                              (!step.isCircuitExercise && nextExercise.isCircuitExercise)
+                                  ? 'Circuit'
+                                  : nextExercise.title,
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
+                                color: colors.textPrimary,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (nextExercise.isCircuitRound) ...[
-                              const SizedBox(height: 8),
+                            if (!step.isCircuitExercise &&
+                                nextExercise.isCircuitExercise &&
+                                nextCircuitSteps.isNotEmpty) ...[
+                              const SizedBox(height: 6),
                               Column(
                                 children: [
-                                  for (final exercise in nextExercise.circuitExercises!)
+                                  for (final circuitStep in nextCircuitSteps)
                                     Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 4),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
                                           Text(
-                                            exercise.exercise?.name ?? 'Exercice',
+                                            circuitStep.title,
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              color: Color(0xFF334155),
+                                            style: TextStyle(
+                                              color: colors.textSecondary,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(height: 6),
-                                          Wrap(
-                                            alignment: WrapAlignment.center,
-                                            spacing: 8,
-                                            runSpacing: 6,
-                                            children: _circuitExerciseBadges(exercise),
-                                          ),
+                                          if (circuitStep.subtitle != null) ...[
+                                            const SizedBox(height: 6),
+                                            Wrap(
+                                              alignment: WrapAlignment.center,
+                                              spacing: 8,
+                                              runSpacing: 6,
+                                              children: [
+                                                _infoPill(
+                                                  icon: circuitStep.isTimedExercise
+                                                      ? Icons.timer_outlined
+                                                      : Icons.fitness_center,
+                                                  label: circuitStep.subtitle!,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ),
@@ -689,6 +740,22 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
+                                  if (nextExercise.isCircuitExercise &&
+                                      nextExercise.round != null &&
+                                      nextExercise.totalRounds != null)
+                                    _infoPill(
+                                      icon: Icons.autorenew,
+                                      label:
+                                          'Tour ${nextExercise.round}/${nextExercise.totalRounds}',
+                                    ),
+                                  if (nextExercise.isCircuitExercise &&
+                                      nextExercise.circuitIndex != null &&
+                                      nextExercise.circuitTotal != null)
+                                    _infoPill(
+                                      icon: Icons.format_list_numbered,
+                                      label:
+                                          'Exercice ${nextExercise.circuitIndex}/${nextExercise.circuitTotal}',
+                                    ),
                                   _infoPill(
                                     icon: Icons.fitness_center,
                                     label: nextExercise.subtitle!,
@@ -710,9 +777,76 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                           ),
                           onPressed: _paused ? null : _advanceStep,
                           child: Text(
-                            isCircuitRound ? 'Valider le tour' : 'Valider la série',
+                            isCircuitExercise ? 'Valider l’exercice' : 'Valider la série',
                             style: const TextStyle(fontSize: 22),
                           ),
+                        ),
+                      ),
+                    ],
+                    if (nextCircuitExercise != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: colors.cardBackgroundAlt,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.skip_next, size: 18, color: accent),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Exercice suivant',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: accent,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              nextCircuitExercise.title,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: colors.textPrimary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (nextCircuitExercise.subtitle != null) ...[
+                              const SizedBox(height: 6),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  if (nextCircuitExercise.circuitIndex != null &&
+                                      nextCircuitExercise.circuitTotal != null)
+                                    _infoPill(
+                                      icon: Icons.format_list_numbered,
+                                      label:
+                                          'Exercice ${nextCircuitExercise.circuitIndex}/${nextCircuitExercise.circuitTotal}',
+                                    ),
+                                  _infoPill(
+                                    icon: nextCircuitExercise.isTimedExercise
+                                        ? Icons.timer_outlined
+                                        : Icons.fitness_center,
+                                    label: nextCircuitExercise.subtitle!,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
@@ -768,38 +902,52 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ),
         ],
       ),
+        );
+      },
     );
   }
 
   Widget _groupCard(SessionGroup group, int index) {
     final isCircuit = group.exercises.length > 1;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          isCircuit
-              ? 'Circuit ${index + 1} · ${group.rounds} ${group.rounds == 1 ? 'tour' : 'tours'}'
-              : 'Exercice ${index + 1} · ${group.rounds} ${group.rounds == 1 ? 'série' : 'séries'}',
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 8),
-        for (final exercise in group.exercises)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_exerciseLabel(exercise)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: _recapExerciseBadges(exercise),
-                ),
-              ],
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isCircuit
+                  ? 'Circuit ${index + 1} · ${group.rounds} ${group.rounds == 1 ? 'tour' : 'tours'}'
+                  : 'Exercice ${index + 1} · ${group.rounds} ${group.rounds == 1 ? 'série' : 'séries'}',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: colors.textPrimary,
+              ),
             ),
-          ),
-      ],
+            const SizedBox(height: 8),
+            for (final exercise in group.exercises)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _exerciseLabel(exercise),
+                      style: TextStyle(color: colors.textPrimary),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: _recapExerciseBadges(exercise),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -808,7 +956,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
     final load = exercise.loadType == 'bodyweight'
         ? 'PDC'
-        : '${exercise.loadValue}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
+        : '${formatDecimalFr(exercise.loadValue)}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
     return '${exercise.exercise?.name ?? 'Exercice'} · $target · $load';
   }
 
@@ -817,51 +965,142 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
     final load = exercise.loadType == 'bodyweight'
         ? 'PDC'
-        : '${exercise.loadValue}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
-    return [
+        : '${formatDecimalFr(exercise.loadValue)}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
+
+    final badges = <Widget>[
       _infoPill(
         icon: exercise.isTimed ? Icons.timer_outlined : Icons.fitness_center,
         label: target,
       ),
       _infoPill(icon: Icons.scale_outlined, label: load),
     ];
+
+    // Add last performance if available
+    final lastPerf = _getLastPerformance(exercise.exerciseId);
+    if (lastPerf != null) {
+      badges.add(_lastPerformancePill(lastPerf));
+    }
+
+    return badges;
+  }
+
+  String? _getLastPerformance(String exerciseId) {
+    final workoutSessions = ref.read(appDataProvider).workoutSessions;
+
+    // Sort by date descending
+    final sorted = [...workoutSessions]
+      ..sort((a, b) => b.dateIso.compareTo(a.dateIso));
+
+    // Find the most recent session with this exercise
+    for (final session in sorted) {
+      final exerciseLog = session.exerciseLogs.firstWhere(
+        (log) => log.exerciseId == exerciseId,
+        orElse: () => WorkoutExerciseLog(
+          exerciseId: null,
+          exerciseName: '',
+          sets: [],
+        ),
+      );
+
+      if (exerciseLog.sets.isNotEmpty) {
+        // Get the best set (max weight)
+        final bestSet = exerciseLog.sets.reduce((a, b) =>
+          a.weight > b.weight ? a : b
+        );
+
+        if (bestSet.weight > 0) {
+          return '${formatDecimalFr(bestSet.weight)}kg × ${bestSet.reps}';
+        } else if (bestSet.reps > 0) {
+          return '${bestSet.reps} reps';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Widget _lastPerformancePill(String performance) {
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        final warningColor = colors.isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309);
+        final warningBg = colors.isDark ? const Color(0xFF422006) : const Color(0xFFFEF3C7);
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: warningBg,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.history, size: 17, color: warningColor),
+              const SizedBox(width: 7),
+              Text(
+                'Dernier: $performance',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: warningColor,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _infoChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF3FF),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      ),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: colors.chipBackground(colors.primary),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.textPrimary,
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _indexBadge(int index) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF94A3B8),
-          width: 1.2,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        index.toString(),
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF64748B),
-        ),
-      ),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        return Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: colors.border,
+              width: 1.2,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            index.toString(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: colors.textSecondary,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -911,13 +1150,20 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     String? fallbackName,
     SessionExerciseConfig? template,
   }) {
-    if (log == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(fallbackName ?? 'Exercice', style: const TextStyle(color: Color(0xFF64748B))),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+
+        if (log == null) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fallbackName ?? 'Exercice',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
             if (template != null) ...[
               const SizedBox(height: 6),
               Wrap(
@@ -934,7 +1180,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                     icon: Icons.scale_outlined,
                     label: template.loadType == 'bodyweight'
                         ? 'PDC'
-                        : '${template.loadValue}kg (${template.loadMode == 'per_hand' ? 'par main' : 'total'})',
+                        : '${formatDecimalFr(template.loadValue)}kg (${template.loadMode == 'per_hand' ? 'par main' : 'total'})',
                   ),
                 ],
               ),
@@ -950,7 +1196,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         ? null
         : (template.loadType == 'bodyweight'
             ? 'PDC'
-            : '${template.loadValue}kg (${template.loadMode == 'per_hand' ? 'par main' : 'total'})');
+            : '${formatDecimalFr(template.loadValue)}kg (${template.loadMode == 'per_hand' ? 'par main' : 'total'})');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -986,27 +1232,38 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ),
         ],
       ),
+        );
+      },
     );
   }
 
   Widget _infoPill({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6EDFF),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17, color: const Color(0xFF1E3A8A)),
-          const SizedBox(width: 7),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+    return Builder(
+      builder: (context) {
+        final colors = context.themeColors;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: colors.chipBackground(colors.primary),
+            borderRadius: BorderRadius.circular(18),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17, color: colors.primary),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1025,17 +1282,29 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       final isCircuit = group.exercises.length > 1;
       for (var round = 1; round <= group.rounds; round++) {
         if (isCircuit) {
-          steps.add(
-            WorkoutStep(
-              type: WorkoutStepType.exercise,
-              title: 'Circuit',
-              subtitle: null,
-              durationSeconds: 0,
-              round: round,
-              totalRounds: group.rounds,
-              circuitExercises: group.exercises,
-            ),
-          );
+          for (var i = 0; i < group.exercises.length; i++) {
+            final exercise = group.exercises[i];
+            final name = exercise.exercise?.name ?? 'Exercice';
+            final target =
+                exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
+            final load = exercise.loadType == 'bodyweight'
+                ? 'PDC'
+                : '${formatDecimalFr(exercise.loadValue)}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
+            steps.add(
+              WorkoutStep(
+                type: WorkoutStepType.exercise,
+                title: name,
+                subtitle: '$target · $load',
+                durationSeconds: exercise.isTimed ? exercise.targetSeconds : 0,
+                exercise: exercise,
+                round: round,
+                totalRounds: group.rounds,
+                isCircuitExercise: true,
+                circuitIndex: i + 1,
+                circuitTotal: group.exercises.length,
+              ),
+            );
+          }
         } else {
           for (final exercise in group.exercises) {
             final name = exercise.exercise?.name ?? 'Exercice';
@@ -1043,7 +1312,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                 exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
             final load = exercise.loadType == 'bodyweight'
                 ? 'PDC'
-                : '${exercise.loadValue}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
+                : '${formatDecimalFr(exercise.loadValue)}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
             steps.add(
               WorkoutStep(
                 type: WorkoutStepType.exercise,
@@ -1078,6 +1347,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
   void _startFromRecap() {
     if (_steps.isEmpty) return;
+    // Unlock audio on iOS Safari/PWA
+    audioService.unlock();
     final profile = ref.read(appDataProvider).profile;
     final startSeconds = profile.startTimerSeconds;
     if (startSeconds <= 0) {
@@ -1249,16 +1520,38 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     return null;
   }
 
-  List<Widget> _circuitExerciseBadges(SessionExerciseConfig exercise) {
-    final target =
-        exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
-    final load = exercise.loadType == 'bodyweight'
-        ? 'PDC'
-        : '${exercise.loadValue}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
-    return [
-      _infoPill(icon: Icons.fitness_center, label: target),
-      _infoPill(icon: Icons.scale_outlined, label: load),
-    ];
+  WorkoutStep? _nextCircuitExercise(WorkoutStep current) {
+    if (!current.isCircuitExercise ||
+        current.round == null ||
+        current.circuitIndex == null) {
+      return null;
+    }
+    final targetIndex = current.circuitIndex! + 1;
+    for (var i = _currentStepIndex + 1; i < _steps.length; i++) {
+      final step = _steps[i];
+      if (!step.isCircuitExercise || step.round != current.round) {
+        if (step.round != current.round) return null;
+        continue;
+      }
+      if (step.circuitIndex == targetIndex) {
+        return step;
+      }
+    }
+    return null;
+  }
+
+  List<WorkoutStep> _collectCircuitRoundSteps(int startIndex) {
+    if (startIndex < 0 || startIndex >= _steps.length) return const [];
+    final first = _steps[startIndex];
+    if (!first.isCircuitExercise || first.round == null) return const [];
+    final round = first.round;
+    final collected = <WorkoutStep>[];
+    for (var i = startIndex; i < _steps.length; i++) {
+      final step = _steps[i];
+      if (!step.isCircuitExercise || step.round != round) break;
+      collected.add(step);
+    }
+    return collected;
   }
 
   String? _previousExerciseName() {
@@ -1279,16 +1572,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     return !nextExercise;
   }
 
-  String _circuitExerciseLabel(SessionExerciseConfig exercise) {
-    final target =
-        exercise.isTimed ? '${exercise.targetSeconds}s' : '${exercise.targetReps} reps';
-    final load = exercise.loadType == 'bodyweight'
-        ? 'PDC'
-        : '${exercise.loadValue}kg (${exercise.loadMode == 'per_hand' ? 'par main' : 'total'})';
-    final name = exercise.exercise?.name ?? 'Exercice';
-    return '$name · $target · $load';
-  }
-
   void _togglePause() {
     setState(() => _paused = !_paused);
   }
@@ -1300,6 +1583,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     ref.read(appDataProvider.notifier).updateProfile(
           profile.copyWith(soundEnabled: next),
         );
+    // Unlock audio on iOS Safari/PWA when enabling sound
+    if (next) {
+      audioService.unlock();
+    }
   }
 
   void _playBeep() {

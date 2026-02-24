@@ -4,6 +4,7 @@ import '../models/profile.dart';
 import '../models/program.dart';
 import '../models/session.dart';
 import '../models/session_template.dart';
+import '../models/user.dart';
 import 'api_client.dart';
 import 'api_exceptions.dart';
 
@@ -285,5 +286,34 @@ class ApiService {
     final res = await _client.delete('$_base/active-workout');
     if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
     if (res.statusCode != 200) throw ApiException('Active workout failed', res.statusCode);
+  }
+
+  Future<List<User>> fetchUsers() async {
+    final res = await _client.get('$_base/users');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Users failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['users'] as List?)
+            ?.map((e) => User.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <User>[];
+  }
+
+  Future<Program> fetchUserProgram(String userId) async {
+    final res = await _client.get('$_base/users/$userId/program');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode == 404) throw ApiException('Programme non trouvé', res.statusCode);
+    if (res.statusCode != 200) throw ApiException('Program failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return Program.fromJson(json['program'] as Map<String, dynamic>);
+  }
+
+  Future<Program> copyUserProgram(String userId) async {
+    final res = await _client.post('$_base/users/$userId/program/copy', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode == 404) throw ApiException('Programme non trouvé', res.statusCode);
+    if (res.statusCode != 200) throw ApiException('Copy failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return Program.fromJson(json['program'] as Map<String, dynamic>);
   }
 }

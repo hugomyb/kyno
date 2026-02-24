@@ -1,13 +1,31 @@
 {
-    "name": "Kyno",
-    "short_name": "kyno",
-    "start_url": ".",
+    "name": "Kyno - Musculation",
+    "short_name": "Kyno",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Application de suivi de programme de musculation",
+    "background_color": "#17203A",
+    "theme_color": "#3B82F6",
+    "description": "Application de suivi de programme de musculation à la maison",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["health", "fitness", "lifestyle"],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Démarrer entraînement",
+            "short_name": "Workout",
+            "description": "Commencer une séance",
+            "url": "/workout",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Programme",
+            "short_name": "Programme",
+            "description": "Voir mon programme",
+            "url": "/program",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

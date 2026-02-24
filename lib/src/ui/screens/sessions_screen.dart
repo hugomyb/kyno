@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/app_data_provider.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
+import '../widgets/custom_app_bar.dart';
 
 class SessionsScreen extends ConsumerStatefulWidget {
   const SessionsScreen({super.key});
@@ -23,6 +25,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final sessions = ref.watch(appDataProvider).sessions;
     final query = _searchController.text.trim().toLowerCase();
     final filtered = query.isEmpty
@@ -30,7 +33,14 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
         : sessions.where((s) => s.name.toLowerCase().contains(query)).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes séances')),
+      appBar: CustomAppBar(
+        title: 'Mes séances',
+        subtitle: '${sessions.length} séance${sessions.length > 1 ? 's' : ''}',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/sessions/new'),
         icon: const Icon(Icons.add),
@@ -44,51 +54,10 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 18,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Mes séances',
-                                      style: Theme.of(context).textTheme.titleMedium,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${sessions.length} séances',
-                                      style: const TextStyle(color: Color(0xFF64748B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              FilledButton.icon(
-                                onPressed: () => context.push('/exercises'),
-                                icon: const Icon(Icons.fitness_center),
-                                label: const Text('Exercices'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
                         TextField(
                           controller: _searchController,
                           onChanged: (_) => setState(() {}),
@@ -109,7 +78,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                         const SizedBox(height: 8),
                         Text(
                           '${filtered.length} / ${sessions.length} séances',
-                          style: const TextStyle(color: Color(0xFF64748B)),
+                          style: TextStyle(color: colors.textSecondary),
                         ),
                       ],
                     ),
@@ -131,73 +100,86 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList.separated(
                       itemCount: filtered.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final session = filtered[index];
                         final totalExercises = session.groups.expand((g) => g.exercises).length;
                         return InkWell(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           onTap: () => context.push('/sessions/${session.id}'),
                           child: Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
+                              color: colors.cardBackground,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: colors.border.withValues(alpha: 0.5),
+                                width: 1,
+                              ),
+                              boxShadow: colors.cardShadow,
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 44,
-                                  height: 44,
+                                  width: 56,
+                                  height: 56,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF4FF),
-                                    borderRadius: BorderRadius.circular(14),
+                                    color: colors.chipBackground(colors.primary),
+                                    borderRadius: BorderRadius.circular(18),
                                   ),
-                                  child: const Icon(Icons.fitness_center, color: Color(0xFF2563EB)),
+                                  child: Icon(
+                                    Icons.fitness_center,
+                                    color: colors.primary,
+                                    size: 28,
+                                  ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         session.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 18,
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w800,
+                                          color: colors.textPrimary,
+                                          letterSpacing: -0.3,
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      const SizedBox(height: 8),
                                       Wrap(
-                                        spacing: 6,
+                                        spacing: 8,
+                                        runSpacing: 6,
                                         children: [
-                                          _pill('${session.groups.length} blocs'),
-                                          _pill('$totalExercises exos'),
+                                          _pill('${session.groups.length} bloc${session.groups.length > 1 ? 's' : ''}'),
+                                          _pill('$totalExercises exercice${totalExercises > 1 ? 's' : ''}'),
                                         ],
                                       ),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () async {
-                                    final confirmed =
-                                        await _confirmDeleteSession(context, session.name);
-                                    if (confirmed != true) return;
-                                    await ref
-                                        .read(appDataProvider.notifier)
-                                        .deleteSession(session.id);
-                                  },
+                                const SizedBox(width: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: const Color(0xFFEF4444),
+                                    onPressed: () async {
+                                      final confirmed =
+                                          await _confirmDeleteSession(context, session.name);
+                                      if (confirmed != true) return;
+                                      await ref
+                                          .read(appDataProvider.notifier)
+                                          .deleteSession(session.id);
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -216,18 +198,19 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
   }
 
   Widget _pill(String label) {
+    final colors = context.themeColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF4FF),
+        color: colors.chipBackground(colors.primary),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF2563EB),
+          color: colors.primary,
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/glass_card.dart';
 
@@ -50,19 +51,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Connexion',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: context.themeColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Connecte-toi pour synchroniser tes donnees.',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: context.themeColors.textSecondary,
                             fontSize: 13,
                           ),
                         ),

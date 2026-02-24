@@ -1,12 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/profile.dart';
 import '../../providers/app_data_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+import '../../utils/number_format.dart';
+import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
+import '../widgets/custom_app_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -27,6 +32,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isSaving = false;
   bool _isPasswordSaving = false;
 
+  double _parseDecimal(String value) {
+    final normalized = value.trim().replaceAll(',', '.');
+    return double.tryParse(normalized) ?? 0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       text: profile.heightCm == 0 ? '' : profile.heightCm.toString(),
     );
     _weightController = TextEditingController(
-      text: profile.weightKg == 0 ? '' : profile.weightKg.toString(),
+      text: profile.weightKg == 0 ? '' : formatDecimalFr(profile.weightKg),
     );
     _startTimerController = TextEditingController(
       text: profile.startTimerSeconds.toString(),
@@ -71,7 +81,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _heightController.text = profile.heightCm == 0 ? '' : profile.heightCm.toString();
-        _weightController.text = profile.weightKg == 0 ? '' : profile.weightKg.toString();
+        _weightController.text =
+            profile.weightKg == 0 ? '' : formatDecimalFr(profile.weightKg);
         _startTimerController.text = profile.startTimerSeconds.toString();
         setState(() {
           _didInitFromProfile = true;
@@ -81,7 +92,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: CustomAppBar(
+        title: 'Profil',
+        subtitle: 'Gérez vos informations',
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _hasChanges
           ? SizedBox(
@@ -97,12 +111,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const AppBackground(),
           SafeArea(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
+                _userInfoCard(context, profile),
+                const SizedBox(height: 24),
                 _profileCard(context, profile),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 _weightChartCard(context, history),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 _settingsCard(context),
                 const SizedBox(height: 80),
               ],
@@ -113,26 +129,110 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _profileCard(BuildContext context, Profile profile) {
+  Widget _userInfoCard(BuildContext context, Profile profile) {
+    final colors = context.themeColors;
+    final userName = profile.name.isNotEmpty ? profile.name : 'Athlète';
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors.isDark
+              ? [
+                  const Color(0xFF6366F1).withValues(alpha: 0.15),
+                  const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                ]
+              : [
+                  const Color(0xFF6366F1).withValues(alpha: 0.08),
+                  const Color(0xFF818CF8).withValues(alpha: 0.05),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: colors.isDark
+              ? const Color(0xFF6366F1).withValues(alpha: 0.3)
+              : const Color(0xFF6366F1).withValues(alpha: 0.2),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: const Color(0xFF6366F1).withValues(alpha: colors.isDark ? 0.2 : 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.person,
+              color: colors.primary,
+              size: 40,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  userName,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Votre profil',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileCard(BuildContext context, Profile profile) {
+    final colors = context.themeColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: colors.cardShadow,
+      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Profil',
-            style: Theme.of(context).textTheme.titleMedium,
+            'Informations physiques',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -149,7 +249,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: _inputBlock(
                   label: 'Poids (kg)',
                   controller: _weightController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
                 ),
               ),
             ],
@@ -170,27 +273,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _settingsCard(BuildContext context) {
+    final colors = context.themeColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        border: Border.all(
+          color: colors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: colors.cardShadow,
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Paramètres',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const SizedBox(height: 12),
+          _themeToggle(context),
+          const SizedBox(height: 16),
           _inputBlock(
             label: 'Timer de départ (s)',
             controller: _startTimerController,
@@ -236,27 +345,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _weightChartCard(BuildContext context, List<WeightEntry> history) {
-    final sorted = [...history]..sort((a, b) => a.dateIso.compareTo(b.dateIso));
+  Widget _themeToggle(BuildContext context) {
+    final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
+    final theme = Theme.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+        color: theme.colorScheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            isDarkMode ? Icons.dark_mode : Icons.light_mode,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Mode sombre',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Switch(
+            value: isDarkMode,
+            onChanged: (_) => ref.read(themeProvider.notifier).toggleTheme(),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+    );
+  }
+
+  Widget _weightChartCard(BuildContext context, List<WeightEntry> history) {
+    final sorted = [...history]..sort((a, b) => a.dateIso.compareTo(b.dateIso));
+    final colors = context.themeColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: colors.cardShadow,
+      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Courbe de poids',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const SizedBox(height: 12),
           if (sorted.isEmpty)
@@ -322,7 +469,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final profile = ref.read(appDataProvider).profile;
 
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
-    final weight = double.tryParse(_weightController.text.trim()) ?? profile.weightKg;
+    final weightText = _weightController.text.trim();
+    final weight = weightText.isEmpty ? profile.weightKg : _parseDecimal(weightText);
     final startTimerSeconds =
         int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
 
@@ -408,7 +556,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _syncDirtyFlag(Profile profile) {
     if (!_didInitFromProfile) return;
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
-    final weight = double.tryParse(_weightController.text.trim()) ?? profile.weightKg;
+    final weightText = _weightController.text.trim();
+    final weight = weightText.isEmpty ? profile.weightKg : _parseDecimal(weightText);
     final startTimerSeconds =
         int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
     final hasChanges = height != profile.heightCm ||
@@ -423,20 +572,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String label,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     bool obscureText = false,
   }) {
+    final colors = context.themeColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           obscureText: obscureText,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF3F5FA),
+            fillColor: colors.cardBackgroundAlt,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
