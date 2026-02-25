@@ -1,7 +1,7 @@
 {
     "name": "Kyno - Musculation",
     "short_name": "Kyno",
-    "start_url": "/",
+    "start_url": "/kyno/",
     "display": "standalone",
     "background_color": "#17203A",
     "theme_color": "#3B82F6",
@@ -15,14 +15,14 @@
             "name": "Démarrer entraînement",
             "short_name": "Workout",
             "description": "Commencer une séance",
-            "url": "/workout",
+            "url": "/kyno/workout",
             "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         },
         {
             "name": "Programme",
             "short_name": "Programme",
             "description": "Voir mon programme",
-            "url": "/program",
+            "url": "/kyno/program",
             "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         }
     ],
