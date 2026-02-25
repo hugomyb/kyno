@@ -11,63 +11,78 @@ class AudioService {
   html.AudioElement? _backupAudio;
   bool _unlocked = false;
   bool _initialized = false;
+  int _playCount = 0;
 
   void _initAudio() {
     try {
-      // Create primary audio element
-      _audio = html.AudioElement('assets/sounds/beep.wav')
+      // Create multiple audio elements for better iOS compatibility
+      _audio = html.AudioElement()
+        ..src = 'assets/sounds/beep.wav'
         ..volume = 1.0
         ..preload = 'auto'
-        ..setAttribute('playsinline', 'true')
-        ..setAttribute('webkit-playsinline', 'true');
+        ..setAttribute('playsinline', '')
+        ..setAttribute('webkit-playsinline', '')
+        ..setAttribute('x-webkit-airplay', 'deny')
+        ..setAttribute('disableRemotePlayback', '');
 
-      // Create backup audio element for iOS
-      _backupAudio = html.AudioElement('assets/sounds/beep.wav')
+      _backupAudio = html.AudioElement()
+        ..src = 'assets/sounds/beep.wav'
         ..volume = 1.0
         ..preload = 'auto'
-        ..setAttribute('playsinline', 'true')
-        ..setAttribute('webkit-playsinline', 'true');
+        ..setAttribute('playsinline', '')
+        ..setAttribute('webkit-playsinline', '')
+        ..setAttribute('x-webkit-airplay', 'deny')
+        ..setAttribute('disableRemotePlayback', '');
 
-      // Load both audio elements
+      // Load both
       _audio?.load();
       _backupAudio?.load();
 
       _initialized = true;
+      print('Audio initialized');
     } catch (e) {
       print('Audio initialization error: $e');
     }
   }
 
-  /// Unlock audio context for iOS Safari/PWA
+  /// Unlock audio for iOS Safari/PWA
   /// This must be called from a user interaction (e.g., button click)
   Future<void> unlock() async {
     if (_unlocked) return;
     if (!_initialized) _initAudio();
 
     try {
-      // Try to play and immediately pause both audio elements
-      // This is required to unlock audio on iOS
+      // Play and pause both audio elements to unlock them
       if (_audio != null) {
-        _audio!.muted = true;
-        await _audio!.play();
-        _audio!.pause();
-        _audio!.currentTime = 0;
-        _audio!.muted = false;
+        try {
+          _audio!.volume = 0;
+          await _audio!.play();
+          await Future.delayed(const Duration(milliseconds: 10));
+          _audio!.pause();
+          _audio!.currentTime = 0;
+          _audio!.volume = 1.0;
+        } catch (e) {
+          print('Primary unlock error: $e');
+        }
       }
 
       if (_backupAudio != null) {
-        _backupAudio!.muted = true;
-        await _backupAudio!.play();
-        _backupAudio!.pause();
-        _backupAudio!.currentTime = 0;
-        _backupAudio!.muted = false;
+        try {
+          _backupAudio!.volume = 0;
+          await _backupAudio!.play();
+          await Future.delayed(const Duration(milliseconds: 10));
+          _backupAudio!.pause();
+          _backupAudio!.currentTime = 0;
+          _backupAudio!.volume = 1.0;
+        } catch (e) {
+          print('Backup unlock error: $e');
+        }
       }
 
       _unlocked = true;
       print('Audio unlocked successfully');
     } catch (e) {
       print('Audio unlock error: $e');
-      // Unlock failed, will retry on next user interaction
     }
   }
 
@@ -80,29 +95,42 @@ class AudioService {
         await unlock();
       }
 
-      // Try primary audio first
-      if (_audio != null) {
-        try {
-          _audio!.currentTime = 0;
-          await _audio!.play();
-          return;
-        } catch (e) {
-          print('Primary audio play error: $e');
-        }
-      }
+      // Alternate between audio elements for better reliability on iOS
+      _playCount++;
+      final useBackup = _playCount % 2 == 0;
 
-      // Fallback to backup audio
-      if (_backupAudio != null) {
+      if (useBackup && _backupAudio != null) {
         try {
           _backupAudio!.currentTime = 0;
           await _backupAudio!.play();
+          print('Beep played (backup)');
+          return;
         } catch (e) {
           print('Backup audio play error: $e');
         }
       }
+
+      if (_audio != null) {
+        try {
+          _audio!.currentTime = 0;
+          await _audio!.play();
+          print('Beep played (primary)');
+        } catch (e) {
+          print('Primary audio play error: $e');
+          // Try backup if primary fails
+          if (_backupAudio != null) {
+            try {
+              _backupAudio!.currentTime = 0;
+              await _backupAudio!.play();
+              print('Beep played (backup fallback)');
+            } catch (e2) {
+              print('Backup fallback error: $e2');
+            }
+          }
+        }
+      }
     } catch (e) {
       print('Audio play error: $e');
-      // no-op
     }
   }
 }
