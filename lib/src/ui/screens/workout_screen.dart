@@ -223,19 +223,51 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                 right: 20,
                 bottom: 16,
                 child: SafeArea(
-                  child: SizedBox(
-                    height: 56,
-                    child: FilledButton(
-                      onPressed: _startFromRecap,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.play_arrow, size: 20),
-                          SizedBox(width: 8),
-                          Text('Démarrer'),
-                        ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_soundEnabled && !_soundInitialized)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: colors.primary.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.volume_up, color: colors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Cliquez sur Démarrer pour activer le son',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      SizedBox(
+                        height: 56,
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _startFromRecap,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.play_arrow, size: 20),
+                              SizedBox(width: 8),
+                              Text('Démarrer'),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -1347,8 +1379,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
   void _startFromRecap() {
     if (_steps.isEmpty) return;
-    // Unlock audio on iOS Safari/PWA
+    // Unlock audio on iOS Safari/PWA - this plays a beep immediately
     audioService.unlock();
+    // Mark sound as initialized so we hide the message
+    setState(() => _soundInitialized = true);
+
     final profile = ref.read(appDataProvider).profile;
     final startSeconds = profile.startTimerSeconds;
     if (startSeconds <= 0) {
@@ -1359,7 +1394,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _remainingSeconds = startSeconds;
     setState(() {});
     _timer?.cancel();
-    _playBeep();
+    // Don't play beep here since unlock() already played one
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
       if (_remainingSeconds <= 3 && _remainingSeconds >= 1) {
@@ -1592,27 +1627,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   void _playBeep() {
     if (!_soundEnabled) return;
     audioService.playBeep();
-    // Visual feedback for iOS when sound might not work
-    _showBeepFlash();
-  }
-
-  void _showBeepFlash() {
-    // Show a brief visual flash to indicate beep
-    if (!mounted) return;
-    final overlay = Overlay.of(context);
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned.fill(
-        child: IgnorePointer(
-          child: Container(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
-    );
-    overlay.insert(overlayEntry);
-    Future.delayed(const Duration(milliseconds: 100), () {
-      overlayEntry.remove();
-    });
   }
 
   void _goBack() {

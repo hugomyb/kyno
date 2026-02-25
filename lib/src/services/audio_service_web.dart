@@ -60,40 +60,41 @@ class AudioService {
 
   /// Unlock audio for iOS Safari/PWA
   /// This must be called from a user interaction (e.g., button click)
+  /// According to iOS restrictions, we must play a sound immediately on user interaction
   Future<void> unlock() async {
-    if (_unlocked) return;
     if (!_initialized) _initAudio();
 
     try {
-      // Play and pause both audio elements to unlock them
+      // On iOS, we MUST play the sound immediately on user interaction
+      // Not just unlock and pause - actually play it
       if (_audio != null) {
         try {
-          _audio!.volume = 0;
-          await _audio!.play();
-          await Future.delayed(const Duration(milliseconds: 10));
-          _audio!.pause();
-          _audio!.currentTime = 0;
           _audio!.volume = 1.0;
+          _audio!.currentTime = 0;
+          await _audio!.play();
+          print('Audio unlocked with immediate play (primary)');
+          _unlocked = true;
+          return;
         } catch (e) {
-          print('Primary unlock error: $e');
+          print('Primary unlock play error: $e');
         }
       }
 
       if (_backupAudio != null) {
         try {
-          _backupAudio!.volume = 0;
-          await _backupAudio!.play();
-          await Future.delayed(const Duration(milliseconds: 10));
-          _backupAudio!.pause();
-          _backupAudio!.currentTime = 0;
           _backupAudio!.volume = 1.0;
+          _backupAudio!.currentTime = 0;
+          await _backupAudio!.play();
+          print('Audio unlocked with immediate play (backup)');
+          _unlocked = true;
+          return;
         } catch (e) {
-          print('Backup unlock error: $e');
+          print('Backup unlock play error: $e');
         }
       }
 
       _unlocked = true;
-      print('Audio unlocked successfully');
+      print('Audio unlock attempted');
     } catch (e) {
       print('Audio unlock error: $e');
     }
@@ -107,9 +108,6 @@ class AudioService {
       if (!_unlocked) {
         await unlock();
       }
-
-      // Try vibration first (works reliably on iOS)
-      _vibrate();
 
       // Alternate between audio elements for better reliability on iOS
       _playCount++;
@@ -147,23 +145,6 @@ class AudioService {
       }
     } catch (e) {
       print('Audio play error: $e');
-    }
-  }
-
-  void _vibrate() {
-    try {
-      // Try to vibrate (works on iOS even when audio doesn't)
-      // Note: Vibration API might not be available on all browsers
-      final navigator = html.window.navigator;
-      // Use dynamic call to avoid type errors
-      try {
-        (navigator as dynamic).vibrate([50]); // 50ms vibration
-        print('Vibration triggered');
-      } catch (e) {
-        // Vibration not supported, ignore
-      }
-    } catch (e) {
-      print('Vibration error: $e');
     }
   }
 }
