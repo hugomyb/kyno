@@ -75,6 +75,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   bool _soundEnabled = true;
   bool _sessionReady = false;
   bool _soundInitialized = false;
+  bool _audioUnlocked = false;
   WorkoutSessionLog? _completedSession;
 
   @override
@@ -226,7 +227,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (_soundEnabled && !_soundInitialized)
+                      if (_soundEnabled && !_audioUnlocked)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
@@ -1379,10 +1380,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
   void _startFromRecap() {
     if (_steps.isEmpty) return;
-    // Unlock audio on iOS Safari/PWA - this plays a beep immediately
-    audioService.unlock();
-    // Mark sound as initialized so we hide the message
-    setState(() => _soundInitialized = true);
+
+    // IMPORTANT: On iOS, we MUST play audio immediately on user click
+    // This unlocks the audio context for future plays
+    if (_soundEnabled && !_audioUnlocked) {
+      audioService.unlock(); // This plays a beep immediately
+      setState(() => _audioUnlocked = true);
+    }
 
     final profile = ref.read(appDataProvider).profile;
     final startSeconds = profile.startTimerSeconds;
@@ -1394,7 +1398,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _remainingSeconds = startSeconds;
     setState(() {});
     _timer?.cancel();
-    // Don't play beep here since unlock() already played one
+    // Play beep for countdown start
+    if (_soundEnabled) {
+      _playBeep();
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
       if (_remainingSeconds <= 3 && _remainingSeconds >= 1) {
