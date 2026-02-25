@@ -13,28 +13,41 @@ class AudioService {
   bool _initialized = false;
   int _playCount = 0;
 
+  // Simple beep sound as base64 data URI (440Hz sine wave)
+  static const String _beepDataUri =
+    'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+
   void _initAudio() {
     try {
-      // Create multiple audio elements for better iOS compatibility
+      // Use data URI for better iOS compatibility
       _audio = html.AudioElement()
-        ..src = 'assets/sounds/beep.wav'
+        ..src = _beepDataUri
         ..volume = 1.0
         ..preload = 'auto'
+        ..loop = false
         ..setAttribute('playsinline', '')
         ..setAttribute('webkit-playsinline', '')
         ..setAttribute('x-webkit-airplay', 'deny')
         ..setAttribute('disableRemotePlayback', '');
 
       _backupAudio = html.AudioElement()
-        ..src = 'assets/sounds/beep.wav'
+        ..src = _beepDataUri
         ..volume = 1.0
         ..preload = 'auto'
+        ..loop = false
         ..setAttribute('playsinline', '')
         ..setAttribute('webkit-playsinline', '')
         ..setAttribute('x-webkit-airplay', 'deny')
         ..setAttribute('disableRemotePlayback', '');
 
-      // Load both
+      // Try to load the actual beep file as well
+      try {
+        _audio!.src = 'assets/sounds/beep.wav';
+        _backupAudio!.src = 'assets/sounds/beep.wav';
+      } catch (e) {
+        print('Could not load beep.wav, using data URI: $e');
+      }
+
       _audio?.load();
       _backupAudio?.load();
 
@@ -95,6 +108,9 @@ class AudioService {
         await unlock();
       }
 
+      // Try vibration first (works reliably on iOS)
+      _vibrate();
+
       // Alternate between audio elements for better reliability on iOS
       _playCount++;
       final useBackup = _playCount % 2 == 0;
@@ -131,6 +147,23 @@ class AudioService {
       }
     } catch (e) {
       print('Audio play error: $e');
+    }
+  }
+
+  void _vibrate() {
+    try {
+      // Try to vibrate (works on iOS even when audio doesn't)
+      // Note: Vibration API might not be available on all browsers
+      final navigator = html.window.navigator;
+      // Use dynamic call to avoid type errors
+      try {
+        (navigator as dynamic).vibrate([50]); // 50ms vibration
+        print('Vibration triggered');
+      } catch (e) {
+        // Vibration not supported, ignore
+      }
+    } catch (e) {
+      print('Vibration error: $e');
     }
   }
 }

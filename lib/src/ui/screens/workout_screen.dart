@@ -1592,6 +1592,27 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   void _playBeep() {
     if (!_soundEnabled) return;
     audioService.playBeep();
+    // Visual feedback for iOS when sound might not work
+    _showBeepFlash();
+  }
+
+  void _showBeepFlash() {
+    // Show a brief visual flash to indicate beep
+    if (!mounted) return;
+    final overlay = Overlay.of(context);
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned.fill(
+        child: IgnorePointer(
+          child: Container(
+            color: Colors.white.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(overlayEntry);
+    Future.delayed(const Duration(milliseconds: 100), () {
+      overlayEntry.remove();
+    });
   }
 
   void _goBack() {
