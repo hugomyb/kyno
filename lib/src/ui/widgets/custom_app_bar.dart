@@ -8,12 +8,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.subtitle,
     this.actions,
     this.leading,
+    this.showBackButton = false,
+    this.onBackPressed,
   });
 
   final String title;
   final String? subtitle;
   final List<Widget>? actions;
   final Widget? leading;
+  final bool showBackButton;
+  final VoidCallback? onBackPressed;
 
   @override
   Size get preferredSize => const Size.fromHeight(80);
@@ -50,7 +54,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              if (leading != null) ...[
+              if (showBackButton) ...[
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: onBackPressed,
+                  color: colors.textPrimary,
+                ),
+                const SizedBox(width: 8),
+              ] else if (leading != null) ...[
                 leading!,
                 const SizedBox(width: 12),
               ],

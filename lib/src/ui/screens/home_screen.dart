@@ -7,6 +7,7 @@ import '../../models/program.dart';
 import '../../models/session.dart';
 import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appDataProvider);
+    final notificationsState = ref.watch(notificationsProvider);
     final profile = state.profile;
     final program = state.program;
     final todayDay = DateTime.now().weekday;
@@ -53,6 +55,9 @@ class HomeScreen extends ConsumerWidget {
       appBar: CustomAppBar(
         title: 'Accueil',
         subtitle: 'Bienvenue $userName',
+        actions: [
+          _buildNotificationButton(context, notificationsState.unreadCount),
+        ],
       ),
       body: Stack(
         children: [
@@ -548,6 +553,46 @@ class HomeScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildNotificationButton(BuildContext context, int unreadCount) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          onPressed: () => context.go('/notifications'),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEF4444),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Center(
+                  child: Text(
+                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

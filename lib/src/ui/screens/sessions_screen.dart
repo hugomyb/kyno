@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/friend.dart';
 import '../../providers/app_data_provider.dart';
+import '../../providers/friends_provider.dart';
+import '../../providers/session_sharing_provider.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -165,6 +168,18 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                                 const SizedBox(width: 8),
                                 Container(
                                   decoration: BoxDecoration(
+                                    color: colors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.share_outlined),
+                                    color: colors.primary,
+                                    onPressed: () => _showShareDialog(context, session.id, session.name),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  decoration: BoxDecoration(
                                     color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -240,5 +255,69 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showShareDialog(BuildContext context, String sessionId, String sessionName) async {
+    final friends = ref.read(friendsProvider).friends;
+
+    if (friends.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous n\'avez pas encore d\'amis. Ajoutez-en dans la section Amis !'),
+        ),
+      );
+      return;
+    }
+
+    final selectedFriend = await showDialog<Friend>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Partager "$sessionName"'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: friends.length,
+              itemBuilder: (context, index) {
+                final friend = friends[index];
+                return ListTile(
+                  title: Text(friend.name),
+                  subtitle: Text(friend.email),
+                  onTap: () => Navigator.pop(context, friend),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selectedFriend != null) {
+      try {
+        await ref.read(sessionSharingProvider.notifier).shareSession(sessionId, selectedFriend.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Séance partagée avec ${selectedFriend.name} !')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${e.toString()}'),
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+          );
+        }
+      }
+    }
   }
 }

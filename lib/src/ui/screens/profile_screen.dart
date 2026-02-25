@@ -2,11 +2,14 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/profile.dart';
 import '../../providers/app_data_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/friends_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../utils/number_format.dart';
 import '../theme/theme_colors.dart';
@@ -114,6 +117,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
                 _userInfoCard(context, profile),
+                const SizedBox(height: 16),
+                _socialCard(context),
                 const SizedBox(height: 24),
                 _profileCard(context, profile),
                 const SizedBox(height: 24),
@@ -205,6 +210,124 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _socialCard(BuildContext context) {
+    final colors = context.themeColors;
+    final friendsState = ref.watch(friendsProvider);
+    final notificationsState = ref.watch(notificationsProvider);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _socialButton(
+            context,
+            colors,
+            icon: Icons.people_outline,
+            label: 'Amis',
+            count: friendsState.friends.length,
+            onTap: () => context.go('/friends'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _socialButton(
+            context,
+            colors,
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+            count: notificationsState.unreadCount,
+            onTap: () => context.go('/notifications'),
+            showBadge: notificationsState.unreadCount > 0,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _socialButton(
+    BuildContext context,
+    ThemeColors colors, {
+    required IconData icon,
+    required String label,
+    required int count,
+    required VoidCallback onTap,
+    bool showBadge = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(icon, color: colors.primary, size: 32),
+                    if (showBadge)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          child: Center(
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

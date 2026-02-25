@@ -116,35 +116,19 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => context.push('/sessions'),
-                              icon: const Icon(Icons.list_alt, size: 20),
-                              label: const Text('Mes séances', style: TextStyle(fontWeight: FontWeight.w700)),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => context.push('/sessions'),
+                          icon: const Icon(Icons.list_alt, size: 20),
+                          label: const Text('Mes séances', style: TextStyle(fontWeight: FontWeight.w700)),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          FilledButton.icon(
-                            onPressed: () => context.push('/program/sharing'),
-                            icon: const Icon(Icons.share, size: 20),
-                            label: const Text('Partager', style: TextStyle(fontWeight: FontWeight.w700)),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                              backgroundColor: const Color(0xFF10B981),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),

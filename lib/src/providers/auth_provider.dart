@@ -108,7 +108,8 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> forceLogout() async {
     await _storage.clearAuthToken();
     state = AuthState.unauthenticated();
-    ref.read(appDataProvider.notifier).state = AppData.empty();
+    // Invalidate app data provider to reset it
+    ref.invalidate(appDataProvider);
   }
 
   Future<void> _refreshUser() async {

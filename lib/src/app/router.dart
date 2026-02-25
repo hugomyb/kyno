@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/notifications_provider.dart';
 import '../services/workout_ui_state.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/exercise_history_screen.dart';
 import '../ui/screens/exercises_screen.dart';
+import '../ui/screens/friends_screen.dart';
 import '../ui/screens/login_screen.dart';
+import '../ui/screens/notifications_screen.dart';
 import '../ui/screens/program_screen.dart';
 import '../ui/screens/program_sharing_screen.dart';
 import '../ui/screens/profile_screen.dart';
@@ -43,6 +46,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/program/sharing',
         builder: (context, state) => const ProgramSharingScreen(),
+      ),
+      GoRoute(
+        path: '/friends',
+        builder: (context, state) => const FriendsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: '/sessions/new',
@@ -92,14 +103,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class NavScaffold extends StatelessWidget {
+class NavScaffold extends ConsumerWidget {
   const NavScaffold({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
+    final unreadCount = ref.watch(notificationsProvider.select((s) => s.unreadCount));
 
     return ValueListenableBuilder<bool>(
       valueListenable: workoutActive,
@@ -131,6 +143,7 @@ class NavScaffold extends StatelessWidget {
                           label: 'Accueil',
                           selected: _indexForLocation(location) == 0,
                           onTap: () => context.go('/'),
+                          badgeCount: unreadCount,
                         ),
                         _NavPill(
                           icon: Icons.fitness_center,
@@ -166,12 +179,14 @@ class _NavPill extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -195,12 +210,45 @@ class _NavPill extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 24,
-                color: selected
-                    ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF3B82F6))
-                    : Colors.white.withValues(alpha: 0.6),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    size: 24,
+                    color: selected
+                        ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF3B82F6))
+                        : Colors.white.withValues(alpha: 0.6),
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: IgnorePointer(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Center(
+                            child: Text(
+                              badgeCount > 9 ? '9+' : badgeCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(

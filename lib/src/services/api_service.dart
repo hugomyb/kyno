@@ -1,9 +1,12 @@
 import '../models/equipment.dart';
 import '../models/exercise.dart';
+import '../models/friend.dart';
+import '../models/notification.dart';
 import '../models/profile.dart';
 import '../models/program.dart';
 import '../models/session.dart';
 import '../models/session_template.dart';
+import '../models/shared_session.dart';
 import '../models/user.dart';
 import 'api_client.dart';
 import 'api_exceptions.dart';
@@ -315,5 +318,145 @@ class ApiService {
     if (res.statusCode != 200) throw ApiException('Copy failed', res.statusCode);
     final json = _client.decodeJson(res.body) as Map<String, dynamic>;
     return Program.fromJson(json['program'] as Map<String, dynamic>);
+  }
+
+  // Friends
+  Future<Friend?> searchUserByEmail(String email) async {
+    final res = await _client.post('$_base/friends/search', {'email': email});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode == 422) throw Exception('Email invalide');
+    if (res.statusCode != 200) throw Exception('Erreur lors de la recherche');
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    if (json['user'] == null) return null;
+    return Friend.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
+  Future<List<Friend>> fetchFriends() async {
+    final res = await _client.get('$_base/friends');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Friends failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['friends'] as List?)
+            ?.map((e) => Friend.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <Friend>[];
+  }
+
+  Future<void> sendFriendRequest(String friendId) async {
+    final res = await _client.post('$_base/friends/request', {'receiver_id': friendId});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode == 400) {
+      final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+      final message = json['message'] as String?;
+      if (message == 'Already friends') {
+        throw Exception('Vous êtes déjà ami avec cet utilisateur');
+      } else if (message == 'Request already sent') {
+        throw Exception('Une demande d\'ami est déjà en attente');
+      }
+      throw Exception('Impossible d\'envoyer la demande');
+    }
+    if (res.statusCode != 201) throw Exception('Erreur lors de l\'envoi de la demande');
+  }
+
+  Future<List<FriendRequest>> fetchFriendRequests() async {
+    final res = await _client.get('$_base/friends/requests');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Requests failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['requests'] as List?)
+            ?.map((e) => FriendRequest.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <FriendRequest>[];
+  }
+
+  Future<void> acceptFriendRequest(String requestId) async {
+    final res = await _client.post('$_base/friends/requests/$requestId/accept', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Accept failed', res.statusCode);
+  }
+
+  Future<void> rejectFriendRequest(String requestId) async {
+    final res = await _client.post('$_base/friends/requests/$requestId/reject', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Reject failed', res.statusCode);
+  }
+
+  Future<void> removeFriend(String friendId) async {
+    final res = await _client.delete('$_base/friends/$friendId');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Remove failed', res.statusCode);
+  }
+
+  // Notifications
+  Future<List<AppNotification>> fetchNotifications() async {
+    final res = await _client.get('$_base/notifications');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Notifications failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['notifications'] as List?)
+            ?.map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <AppNotification>[];
+  }
+
+  Future<int> fetchUnreadNotificationsCount() async {
+    final res = await _client.get('$_base/notifications/unread-count');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Count failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> markNotificationAsRead(String notificationId) async {
+    final res = await _client.post('$_base/notifications/$notificationId/read', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Mark read failed', res.statusCode);
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    final res = await _client.post('$_base/notifications/read-all', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Mark all read failed', res.statusCode);
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    final res = await _client.delete('$_base/notifications/$notificationId');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Delete failed', res.statusCode);
+  }
+
+  // Session Sharing
+  Future<void> shareSession(String sessionId, String friendId) async {
+    final res = await _client.post('$_base/sessions/share', {
+      'session_id': sessionId,
+      'friend_id': friendId,
+    });
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 201) throw ApiException('Share failed', res.statusCode);
+  }
+
+  Future<List<SharedSession>> fetchSharedSessions() async {
+    final res = await _client.get('$_base/sessions/shared');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Shared sessions failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return (json['shares'] as List?)
+            ?.map((e) => SharedSession.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <SharedSession>[];
+  }
+
+  Future<TrainingSessionTemplate> acceptSharedSession(String sharedSessionId) async {
+    final res = await _client.post('$_base/sessions/shared/$sharedSessionId/accept', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Accept failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return TrainingSessionTemplate.fromJson(json['session'] as Map<String, dynamic>);
+  }
+
+  Future<void> rejectSharedSession(String sharedSessionId) async {
+    final res = await _client.post('$_base/sessions/shared/$sharedSessionId/reject', {});
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Reject failed', res.statusCode);
   }
 }
