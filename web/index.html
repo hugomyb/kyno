@@ -67,10 +67,13 @@
 
         btn.addEventListener('click', () => {
           sessionStorage.setItem(bannerKey, '1');
+          if (updateBanner && updateBanner.parentNode) {
+            updateBanner.parentNode.removeChild(updateBanner);
+          }
           if (registration && registration.waiting) {
             registration.waiting.postMessage('skipWaiting');
           } else if (registration) {
-            registration.update();
+            registration.update().finally(() => window.location.reload());
           } else {
             window.location.reload();
           }
