@@ -97,6 +97,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    await forceLogout();
     try {
       await _authService.logout();
     } on UnauthorizedException {
@@ -104,7 +105,6 @@ class AuthNotifier extends Notifier<AuthState> {
     } on ApiException {
       // Ignore API errors on logout.
     }
-    await forceLogout();
   }
 
   Future<void> forceLogout() async {

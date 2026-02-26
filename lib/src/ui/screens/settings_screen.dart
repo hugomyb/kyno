@@ -189,7 +189,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     height: 48,
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => ref.read(authProvider.notifier).logout(),
+                      onPressed: () {
+                        ref.read(authProvider.notifier).forceLogout();
+                        context.go('/login');
+                      },
                       icon: const Icon(Icons.logout),
                       label: const Text('Se déconnecter'),
                       style: OutlinedButton.styleFrom(
