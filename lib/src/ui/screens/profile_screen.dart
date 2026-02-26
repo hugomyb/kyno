@@ -7,10 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../models/profile.dart';
 import '../../providers/app_data_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/notifications_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../utils/number_format.dart';
 import '../../utils/streak.dart';
 import '../theme/theme_colors.dart';
@@ -24,17 +22,15 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TextEditingController _heightController;
   late TextEditingController _weightController;
-  late TextEditingController _startTimerController;
-  late TextEditingController _currentPasswordController;
-  late TextEditingController _newPasswordController;
-  late TextEditingController _confirmPasswordController;
   bool _didInitFromProfile = false;
   bool _hasChanges = false;
   bool _isSaving = false;
-  bool _isPasswordSaving = false;
+
+  late TabController _tabController;
 
   double _parseDecimal(String value) {
     final normalized = value.trim().replaceAll(',', '.');
@@ -44,6 +40,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     final profile = ref.read(appDataProvider).profile;
     _heightController = TextEditingController(
       text: profile.heightCm == 0 ? '' : profile.heightCm.toString(),
@@ -51,28 +48,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _weightController = TextEditingController(
       text: profile.weightKg == 0 ? '' : formatDecimalFr(profile.weightKg),
     );
-    _startTimerController = TextEditingController(
-      text: profile.startTimerSeconds.toString(),
-    );
-    _currentPasswordController = TextEditingController();
-    _newPasswordController = TextEditingController();
-    _confirmPasswordController = TextEditingController();
     _heightController.addListener(_onFieldChanged);
     _weightController.addListener(_onFieldChanged);
-    _startTimerController.addListener(_onFieldChanged);
-    _currentPasswordController.addListener(_onPasswordFieldChanged);
-    _newPasswordController.addListener(_onPasswordFieldChanged);
-    _confirmPasswordController.addListener(_onPasswordFieldChanged);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _heightController.dispose();
     _weightController.dispose();
-    _startTimerController.dispose();
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -89,7 +73,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _heightController.text = profile.heightCm == 0 ? '' : profile.heightCm.toString();
         _weightController.text =
             profile.weightKg == 0 ? '' : formatDecimalFr(profile.weightKg);
-        _startTimerController.text = profile.startTimerSeconds.toString();
         setState(() {
           _didInitFromProfile = true;
           _hasChanges = false;
@@ -101,6 +84,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: CustomAppBar(
         title: 'Profil',
         subtitle: 'Gérez vos informations',
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _hasChanges
@@ -116,22 +105,71 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         children: [
           const AppBackground(),
           SafeArea(
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-              children: [
-                _userInfoCard(context, profile, streak),
-                const SizedBox(height: 16),
-                _socialCard(context),
-                const SizedBox(height: 24),
-                _profileCard(context, profile),
-                const SizedBox(height: 24),
-                _weightChartCard(context, history),
-                const SizedBox(height: 24),
-                _settingsCard(context),
-                const SizedBox(height: 80),
-              ],
+              child: Column(
+                children: [
+                  _userInfoCard(context, profile, streak),
+                  const SizedBox(height: 16),
+                  _socialCard(context),
+                  const SizedBox(height: 16),
+                  _profileTabs(context),
+                  const SizedBox(height: 12),
+                  AnimatedBuilder(
+                    animation: _tabController,
+                    builder: (context, _) {
+                      final index = _tabController.index;
+                      if (index == 0) {
+                        return Column(
+                          children: [
+                            _profileCard(context, profile),
+                            const SizedBox(height: 16),
+                            _weightChartCard(context, history),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          _statsGrid(context, appData),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileTabs(BuildContext context) {
+    final colors = context.themeColors;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: const EdgeInsets.all(2),
+        indicator: BoxDecoration(
+          color: colors.primary.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        labelColor: colors.textPrimary,
+        unselectedLabelColor: colors.textSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        dividerColor: Colors.transparent,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        tabs: const [
+          Tab(text: 'Informations'),
+          Tab(text: 'Statistiques'),
         ],
       ),
     );
@@ -373,16 +411,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Informations physiques',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colors.textPrimary,
-              letterSpacing: -0.3,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.person_outline,
+                  color: colors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Informations physiques',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -390,6 +445,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   label: 'Taille (cm)',
                   controller: _heightController,
                   keyboardType: TextInputType.number,
+                  icon: Icons.height,
                 ),
               ),
               const SizedBox(width: 12),
@@ -401,127 +457,152 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
+                  icon: Icons.monitor_weight_outlined,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => ref.read(authProvider.notifier).logout(),
-              child: const Text('Se deconnecter'),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _settingsCard(BuildContext context) {
+  Widget _statsGrid(BuildContext context, AppData appData) {
+    final workouts = appData.workoutSessions;
+    final totalSessions = workouts.length;
+    final totalMinutes = workouts.fold<int>(
+      0,
+      (sum, session) => sum + session.durationMinutes,
+    );
+    final avgMinutes = totalSessions == 0 ? 0 : (totalMinutes / totalSessions);
+    final totalExercises = workouts.fold<int>(
+      0,
+      (sum, session) => sum + session.exerciseLogs.length,
+    );
+    final totalSets = workouts.fold<int>(
+      0,
+      (sum, session) => sum + session.exerciseLogs.fold<int>(
+            0,
+            (inner, log) => inner + log.sets.length,
+          ),
+    );
+    final totalVolume = workouts.fold<double>(
+      0,
+      (sum, session) => sum +
+          session.exerciseLogs.fold<double>(
+            0,
+            (inner, log) => inner +
+                log.sets.fold<double>(
+                  0,
+                  (setSum, set) => setSum + (set.weight * set.reps),
+                ),
+          ),
+    );
+
+    final uniqueDays = <String>{};
+    final exerciseCounts = <String, int>{};
+    for (final session in workouts) {
+      final date = DateTime.tryParse(session.dateIso);
+      if (date != null) {
+        final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        uniqueDays.add(key);
+      }
+      for (final log in session.exerciseLogs) {
+        final name = log.exerciseName.trim();
+        if (name.isEmpty) continue;
+        exerciseCounts[name] = (exerciseCounts[name] ?? 0) + 1;
+      }
+    }
+
+    String? topExercise;
+    int topCount = 0;
+    exerciseCounts.forEach((name, count) {
+      if (count > topCount) {
+        topCount = count;
+        topExercise = name;
+      }
+    });
+
+    final hours = totalMinutes ~/ 60;
+    final minutesRemainder = totalMinutes % 60;
+    final avgMinutesLabel = '${formatDecimalFr(avgMinutes)} min';
+    final totalTimeLabel = hours > 0 ? '${hours}h ${minutesRemainder}m' : '${totalMinutes} min';
+    final volumeLabel = '${formatDecimalFr(totalVolume)} kg';
+
+    final stats = [
+      _StatItem('Séances totales', totalSessions.toString(), 'séances'),
+      _StatItem('Temps total', totalTimeLabel, 'durée cumulée'),
+      _StatItem('Durée moyenne', avgMinutesLabel, 'par séance'),
+      _StatItem('Jours actifs', uniqueDays.length.toString(), 'jours'),
+      _StatItem('Exercices réalisés', totalExercises.toString(), 'exercices'),
+      _StatItem('Séries réalisées', totalSets.toString(), 'séries'),
+      _StatItem('Volume total', volumeLabel, 'charge totale'),
+      _StatItem('Exercice favori', topExercise ?? '—', 'le plus fait'),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 680 ? 3 : 2;
+        return GridView.count(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 2.3,
+          children: [
+            for (final stat in stats) _statCard(context, stat),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _statCard(BuildContext context, _StatItem stat) {
     final colors = context.themeColors;
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border.withValues(alpha: 0.5)),
         boxShadow: colors.cardShadow,
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Paramètres',
+            stat.label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            stat.value,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: colors.textPrimary,
-              letterSpacing: -0.3,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 12),
-          _themeToggle(context),
-          const SizedBox(height: 16),
-          _inputBlock(
-            label: 'Timer de départ (s)',
-            controller: _startTimerController,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Mot de passe',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 12),
-          _inputBlock(
-            label: 'Mot de passe actuel',
-            controller: _currentPasswordController,
-            keyboardType: TextInputType.text,
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          _inputBlock(
-            label: 'Nouveau mot de passe',
-            controller: _newPasswordController,
-            keyboardType: TextInputType.text,
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          _inputBlock(
-            label: 'Confirmer le nouveau mot de passe',
-            controller: _confirmPasswordController,
-            keyboardType: TextInputType.text,
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _canSavePassword && !_isPasswordSaving ? _savePassword : null,
-              child: Text(_isPasswordSaving ? 'Enregistrement...' : 'Mettre à jour'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _themeToggle(BuildContext context) {
-    final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            isDarkMode ? Icons.dark_mode : Icons.light_mode,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Mode sombre',
-              style: theme.textTheme.bodyLarge?.copyWith(
+          if (stat.caption != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              stat.caption!,
+              style: TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
+                color: colors.textSecondary,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          Switch(
-            value: isDarkMode,
-            onChanged: (_) => ref.read(themeProvider.notifier).toggleTheme(),
-          ),
+          ],
         ],
       ),
     );
@@ -544,16 +625,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Courbe de poids',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colors.textPrimary,
-              letterSpacing: -0.3,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.show_chart,
+                  color: colors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Courbe de poids',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           if (sorted.isEmpty)
             Text(
               'Aucune mesure enregistree.',
@@ -619,13 +717,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
     final weightText = _weightController.text.trim();
     final weight = weightText.isEmpty ? profile.weightKg : _parseDecimal(weightText);
-    final startTimerSeconds =
-        int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
 
     final updated = profile.copyWith(
       heightCm: height,
       weightKg: weight,
-      startTimerSeconds: startTimerSeconds.clamp(0, 60),
     );
 
     setState(() => _isSaving = true);
@@ -654,63 +749,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _syncDirtyFlag(ref.read(appDataProvider).profile);
   }
 
-  void _onPasswordFieldChanged() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  bool get _canSavePassword {
-    final current = _currentPasswordController.text.trim();
-    final next = _newPasswordController.text.trim();
-    final confirm = _confirmPasswordController.text.trim();
-    if (current.isEmpty || next.isEmpty || confirm.isEmpty) return false;
-    return true;
-  }
-
-  Future<void> _savePassword() async {
-    final current = _currentPasswordController.text.trim();
-    final next = _newPasswordController.text.trim();
-    final confirm = _confirmPasswordController.text.trim();
-    if (next != confirm) {
-      _showMessage('Les mots de passe ne correspondent pas.');
-      return;
-    }
-    if (next.length < 8) {
-      _showMessage('Le mot de passe doit contenir au moins 8 caractères.');
-      return;
-    }
-    setState(() => _isPasswordSaving = true);
-    try {
-      await ref.read(appDataProvider.notifier).changePassword(
-            currentPassword: current,
-            newPassword: next,
-            confirmPassword: confirm,
-          );
-      if (!mounted) return;
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
-      _showMessage('Mot de passe mis à jour.');
-    } catch (_) {
-      if (!mounted) return;
-      _showMessage('Impossible de mettre à jour le mot de passe.');
-    } finally {
-      if (!mounted) return;
-      setState(() => _isPasswordSaving = false);
-    }
-  }
-
   void _syncDirtyFlag(Profile profile) {
     if (!_didInitFromProfile) return;
     final height = int.tryParse(_heightController.text.trim()) ?? profile.heightCm;
     final weightText = _weightController.text.trim();
     final weight = weightText.isEmpty ? profile.weightKg : _parseDecimal(weightText);
-    final startTimerSeconds =
-        int.tryParse(_startTimerController.text.trim()) ?? profile.startTimerSeconds;
-    final hasChanges = height != profile.heightCm ||
-        weight != profile.weightKg ||
-        startTimerSeconds.clamp(0, 60) != profile.startTimerSeconds;
+    final hasChanges = height != profile.heightCm || weight != profile.weightKg;
     if (hasChanges != _hasChanges && mounted) {
       setState(() => _hasChanges = hasChanges);
     }
@@ -722,6 +766,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     bool obscureText = false,
+    IconData? icon,
   }) {
     final colors = context.themeColors;
     return Column(
@@ -729,9 +774,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: colors.textSecondary,
+          ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
@@ -740,20 +789,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           decoration: InputDecoration(
             filled: true,
             fillColor: colors.cardBackgroundAlt,
+            prefixIcon: icon != null
+                ? Icon(icon, color: colors.textSecondary, size: 20)
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
+            contentPadding: icon != null
+                ? const EdgeInsets.symmetric(horizontal: 16, vertical: 16)
+                : const EdgeInsets.all(16),
           ),
         ),
       ],
     );
   }
 
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+}
+
+class _StatItem {
+  const _StatItem(this.label, this.value, [this.caption]);
+
+  final String label;
+  final String value;
+  final String? caption;
 }

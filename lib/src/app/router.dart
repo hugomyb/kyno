@@ -14,6 +14,7 @@ import '../ui/screens/notifications_screen.dart';
 import '../ui/screens/program_screen.dart';
 import '../ui/screens/program_sharing_screen.dart';
 import '../ui/screens/profile_screen.dart';
+import '../ui/screens/settings_screen.dart';
 import '../ui/screens/session_editor_screen.dart';
 import '../ui/screens/sessions_screen.dart';
 import '../ui/screens/workout_screen.dart';
@@ -86,6 +87,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
