@@ -4,6 +4,7 @@ import '../services/api_client.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/push_notifications_service.dart';
+import '../services/push_notifications_types.dart';
 import '../services/storage_service.dart';
 
 final storageProvider = Provider<StorageService>((ref) {

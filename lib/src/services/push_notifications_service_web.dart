@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:html' as html;
-import 'dart:js_util' as js_util;
 import 'dart:typed_data';
 
 import 'api_service.dart';
@@ -30,7 +29,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return const PushSupport(isSupported: false, reason: 'Service worker non actif');
     }
 
-    final pushManager = js_util.getProperty(registration, 'pushManager');
+    final pushManager = registration.pushManager;
     if (pushManager == null) {
       return const PushSupport(isSupported: false, reason: 'Push indisponible');
     }
@@ -57,7 +56,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return false;
     }
 
-    final pushManager = js_util.getProperty(registration, 'pushManager');
+    final pushManager = registration.pushManager;
     if (pushManager == null) {
       return false;
     }
@@ -83,7 +82,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return false;
     }
 
-    final pushManager = js_util.getProperty(registration, 'pushManager');
+    final pushManager = registration.pushManager;
     if (pushManager == null) {
       return false;
     }
@@ -95,10 +94,10 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
         return false;
       }
 
-      final options = js_util.jsify({
+      final options = {
         'userVisibleOnly': true,
         'applicationServerKey': _decodeVapidKey(publicKey),
-      });
+      };
 
       subscription = await _subscribe(pushManager, options);
       if (subscription == null) {
@@ -115,7 +114,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       endpoint: data.endpoint,
       p256dhKey: data.p256dhKey,
       authKey: data.authKey,
-      contentEncoding: 'aes128gcm',
+      contentEncoding: _contentEncoding(),
       userAgent: html.window.navigator.userAgent,
     );
 
@@ -129,7 +128,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return;
     }
 
-    final pushManager = js_util.getProperty(registration, 'pushManager');
+    final pushManager = registration.pushManager;
     if (pushManager == null) {
       return;
     }
@@ -139,8 +138,8 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return;
     }
 
-    final endpoint = js_util.getProperty(subscription, 'endpoint')?.toString();
-    await js_util.promiseToFuture(js_util.callMethod(subscription, 'unsubscribe', []));
+    final endpoint = subscription.endpoint;
+    await subscription.unsubscribe();
 
     if (endpoint != null && endpoint.isNotEmpty) {
       await _api.unregisterPushSubscription(endpoint: endpoint);
@@ -156,19 +155,20 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
     }
   }
 
-  Future<dynamic> _getSubscription(dynamic pushManager) async {
+  Future<html.PushSubscription?> _getSubscription(html.PushManager pushManager) async {
     try {
-      return await js_util.promiseToFuture(js_util.callMethod(pushManager, 'getSubscription', []));
+      return await pushManager.getSubscription();
     } catch (_) {
       return null;
     }
   }
 
-  Future<dynamic> _subscribe(dynamic pushManager, dynamic options) async {
+  Future<html.PushSubscription?> _subscribe(
+    html.PushManager pushManager,
+    Map<String, dynamic> options,
+  ) async {
     try {
-      return await js_util.promiseToFuture(
-        js_util.callMethod(pushManager, 'subscribe', [options]),
-      );
+      return await pushManager.subscribe(options);
     } catch (_) {
       return null;
     }
@@ -198,23 +198,34 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
     return Uint8List.fromList(base64Decode(normalized));
   }
 
-  _SubscriptionData _extractSubscription(dynamic subscription) {
-    try {
-      final json = js_util.callMethod(subscription, 'toJSON', []);
-      final endpoint = (js_util.getProperty(json, 'endpoint') ??
-              js_util.getProperty(subscription, 'endpoint'))
-          ?.toString();
-      final keys = js_util.getProperty(json, 'keys');
-      final p256dh = js_util.getProperty(keys, 'p256dh')?.toString();
-      final auth = js_util.getProperty(keys, 'auth')?.toString();
-      return _SubscriptionData(
-        endpoint: endpoint ?? '',
-        p256dhKey: p256dh ?? '',
-        authKey: auth ?? '',
-      );
-    } catch (_) {
-      return const _SubscriptionData();
+  _SubscriptionData _extractSubscription(html.PushSubscription subscription) {
+    final endpoint = subscription.endpoint ?? '';
+    final p256dh = _encodeKey(subscription.getKey('p256dh'));
+    final auth = _encodeKey(subscription.getKey('auth'));
+    return _SubscriptionData(
+      endpoint: endpoint,
+      p256dhKey: p256dh,
+      authKey: auth,
+    );
+  }
+
+  String _encodeKey(ByteBuffer? buffer) {
+    if (buffer == null) {
+      return '';
     }
+    final bytes = Uint8List.view(buffer);
+    return base64UrlEncode(bytes).replaceAll('=', '');
+  }
+
+  String _contentEncoding() {
+    final encodings = html.PushManager.supportedContentEncodings;
+    if (encodings == null || encodings.isEmpty) {
+      return 'aes128gcm';
+    }
+    if (encodings.contains('aes128gcm')) {
+      return 'aes128gcm';
+    }
+    return encodings.first;
   }
 }
 
