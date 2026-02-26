@@ -85,15 +85,17 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       var enabled = await _service.isSubscribed();
       if (!enabled && permission == PushPermission.granted) {
         // Permission already granted; attempt to create/restore subscription.
-        enabled = await _service.enable();
-        if (!enabled) {
+        try {
+          enabled = await _service.enable();
+        } catch (e) {
           state = state.copyWith(
             supported: true,
             supportReason: support.reason,
             permission: permission,
             isEnabled: false,
             isLoading: false,
-            error: 'Autorisees mais abonnement non cree',
+            error: 'Autorisees mais abonnement non cree: $e',
+            lastAttempt: 'auto-enable:$e',
           );
           return;
         }
@@ -110,6 +112,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       state = state.copyWith(
         isLoading: false,
         error: message,
+        lastAttempt: 'refresh:$e',
       );
     }
   }
@@ -118,12 +121,13 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (enable) {
-        final success = await _service.enable();
-        if (!success) {
+        try {
+          await _service.enable();
+        } catch (e) {
           state = state.copyWith(
             isLoading: false,
-            error: 'Autorisation refusée ou configuration manquante',
-            lastAttempt: 'enable:false',
+            error: 'Autorisation refusée ou configuration manquante: $e',
+            lastAttempt: 'enable:$e',
           );
           await refresh();
           return;
