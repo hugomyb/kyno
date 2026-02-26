@@ -9,8 +9,6 @@ class PushNotificationsState {
     required this.isEnabled,
     required this.permission,
     this.supportReason,
-    this.diagnostics,
-    this.lastCheckedAt,
     this.isLoading = false,
     this.error,
   });
@@ -19,8 +17,6 @@ class PushNotificationsState {
   final bool isEnabled;
   final PushPermission permission;
   final String? supportReason;
-  final PushDiagnostics? diagnostics;
-  final DateTime? lastCheckedAt;
   final bool isLoading;
   final String? error;
 
@@ -29,8 +25,6 @@ class PushNotificationsState {
     bool? isEnabled,
     PushPermission? permission,
     String? supportReason,
-    PushDiagnostics? diagnostics,
-    DateTime? lastCheckedAt,
     bool? isLoading,
     String? error,
   }) {
@@ -39,8 +33,6 @@ class PushNotificationsState {
       isEnabled: isEnabled ?? this.isEnabled,
       permission: permission ?? this.permission,
       supportReason: supportReason ?? this.supportReason,
-      diagnostics: diagnostics ?? this.diagnostics,
-      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -52,8 +44,6 @@ class PushNotificationsState {
       isEnabled: false,
       permission: PushPermission.prompt,
       supportReason: null,
-      diagnostics: null,
-      lastCheckedAt: null,
       isLoading: false,
       error: null,
     );
@@ -73,11 +63,6 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      PushDiagnostics? diagnostics;
-      try {
-        diagnostics = await _service.buildDiagnostics();
-      } catch (_) {}
-
       final support = await _service.checkSupport();
       if (!support.isSupported) {
         final reason = support.reason ?? 'Support indisponible (raison inconnue)';
@@ -86,8 +71,6 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
           supportReason: reason,
           permission: PushPermission.prompt,
           isEnabled: false,
-          diagnostics: diagnostics,
-          lastCheckedAt: DateTime.now(),
           isLoading: false,
         );
         return;
@@ -100,16 +83,12 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
         supportReason: support.reason,
         permission: permission,
         isEnabled: enabled,
-        diagnostics: diagnostics,
-        lastCheckedAt: DateTime.now(),
         isLoading: false,
       );
     } catch (e) {
       final message = 'Impossible de charger les notifications push: $e';
       state = state.copyWith(
         isLoading: false,
-        diagnostics: state.diagnostics,
-        lastCheckedAt: DateTime.now(),
         error: message,
       );
     }
@@ -128,10 +107,15 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
           await refresh();
           return;
         }
+        state = state.copyWith(isEnabled: true, isLoading: false);
+        await refresh();
+        return;
       } else {
         await _service.disable();
+        state = state.copyWith(isEnabled: false, isLoading: false);
+        await refresh();
+        return;
       }
-      await refresh();
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
@@ -140,18 +124,6 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
     }
   }
 
-  Future<void> forceRegisterServiceWorker() async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      await _service.forceRegisterServiceWorker();
-      await refresh();
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Impossible de forcer le service worker: $e',
-      );
-    }
-  }
 }
 
 final pushNotificationsProvider = NotifierProvider<PushNotificationsNotifier, PushNotificationsState>(

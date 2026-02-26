@@ -333,32 +333,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: colors.textSecondary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Dernier check: ${state.lastCheckedAt ?? 'jamais'}',
-          style: TextStyle(
-            fontSize: 10,
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            TextButton(
-              onPressed: state.isLoading
-                  ? null
-                  : () => ref.read(pushNotificationsProvider.notifier).refresh(),
-              child: const Text('Relancer diagnostic'),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: state.isLoading
-                  ? null
-                  : () => ref.read(pushNotificationsProvider.notifier).forceRegisterServiceWorker(),
-              child: const Text('Forcer SW'),
-            ),
-          ],
-        ),
         if (state.error != null) ...[
           const SizedBox(height: 6),
           Text(
@@ -369,69 +343,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
-        if (state.diagnostics != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Diag: notif=${state.diagnostics!.notificationsSupported ? 'ok' : 'no'} | '
-            'sw=${state.diagnostics!.serviceWorkerSupported ? 'ok' : 'no'} | '
-            'ready=${state.diagnostics!.serviceWorkerReady ? 'ok' : 'no'} | '
-            'push=${state.diagnostics!.pushManagerSupported ? 'ok' : 'no'} | '
-            'standalone=${state.diagnostics!.displayModeStandalone ? 'ok' : 'no'} | '
-            'ctrl=${state.diagnostics!.hasServiceWorkerController ? 'ok' : 'no'} | '
-            'secure=${state.diagnostics!.isSecureContext ? 'ok' : 'no'}',
-            style: TextStyle(
-              fontSize: 11,
-              color: colors.textSecondary,
-            ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed:
+                state.isLoading ? null : () => ref.read(pushNotificationsProvider.notifier).refresh(),
+            child: const Text('Actualiser'),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'UA: ${state.diagnostics!.userAgent}',
-            style: TextStyle(
-              fontSize: 10,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'URL: ${state.diagnostics!.currentUrl}',
-            style: TextStyle(
-              fontSize: 10,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Base: ${state.diagnostics!.baseUrl}',
-            style: TextStyle(
-              fontSize: 10,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Reg: ${state.diagnostics!.hasRegistration ? 'yes' : 'no'} | '
-            'scope=${state.diagnostics!.registrationScope} | '
-            'script=${state.diagnostics!.registrationScriptUrl} | '
-            'state=${state.diagnostics!.registrationState} | '
-            'src=${state.diagnostics!.registrationSource}',
-            style: TextStyle(
-              fontSize: 10,
-              color: colors.textSecondary,
-            ),
-          ),
-          if (state.diagnostics!.serviceWorkerError != null &&
-              state.diagnostics!.serviceWorkerError!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              'SW error: ${state.diagnostics!.serviceWorkerError}',
-              style: TextStyle(
-                fontSize: 10,
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        ],
+        ),
       ],
     );
   }
