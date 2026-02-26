@@ -34,6 +34,12 @@
       let updateBanner;
       let refreshing = false;
       let lastRegistration = null;
+      const buildStampMeta = document.querySelector('meta[name="build-stamp"]');
+      const buildStamp = buildStampMeta ? buildStampMeta.getAttribute('content') : null;
+      const storedStamp = buildStamp ? localStorage.getItem('build-stamp') : null;
+      if (buildStamp && !storedStamp) {
+        localStorage.setItem('build-stamp', buildStamp);
+      }
 
       const showUpdateBanner = (registration) => {
         if (updateBanner) return;
@@ -70,6 +76,9 @@
         btn.style.cursor = 'pointer';
 
         btn.addEventListener('click', () => {
+          if (buildStamp) {
+            localStorage.setItem('build-stamp', buildStamp);
+          }
           if (registration && registration.waiting) {
             registration.waiting.postMessage('skipWaiting');
           } else if (registration) {
@@ -120,6 +129,9 @@
       });
 
       navigator.serviceWorker.getRegistration().then(trackRegistration);
+      if (storedStamp && buildStamp && storedStamp !== buildStamp) {
+        showUpdateBanner(lastRegistration);
+      }
     }
   </script>
   <script src="flutter_bootstrap.js" async></script>
