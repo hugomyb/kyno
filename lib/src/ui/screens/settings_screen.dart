@@ -25,11 +25,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _newPasswordController;
   late TextEditingController _confirmPasswordController;
   ProviderSubscription<AuthState>? _authSub;
+  bool _didInitPush = false;
 
   bool _didInitFromProfile = false;
   bool _timerDirty = false;
   bool _isSavingTimer = false;
   bool _isPasswordSaving = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInitPush) {
+      _didInitPush = true;
+      ref.read(pushNotificationsProvider.notifier).refresh();
+    }
+  }
 
   @override
   void initState() {
@@ -53,10 +63,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.read(pushNotificationsProvider.notifier).refresh();
-    });
   }
 
   @override

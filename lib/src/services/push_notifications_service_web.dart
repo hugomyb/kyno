@@ -175,8 +175,11 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
 
   Future<html.ServiceWorkerRegistration?> _getRegistration() async {
     try {
-      final reg = await html.window.navigator.serviceWorker?.ready;
-      return reg;
+      final ready = html.window.navigator.serviceWorker?.ready;
+      if (ready == null) {
+        return null;
+      }
+      return await ready.timeout(const Duration(seconds: 3));
     } catch (_) {
       return null;
     }
