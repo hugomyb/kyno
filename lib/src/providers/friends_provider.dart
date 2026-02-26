@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/friend.dart';
 import '../services/api_service.dart';
+import 'app_lifecycle_provider.dart';
 import 'service_providers.dart';
 
 class FriendsState {
@@ -49,6 +51,14 @@ class FriendsNotifier extends Notifier<FriendsState> {
     Future.microtask(() => loadAll());
     // Start polling every 15 seconds
     _startPolling();
+    ref.listen<AppLifecycleState>(appLifecycleProvider, (previous, next) {
+      if (next == AppLifecycleState.resumed) {
+        _startPolling();
+        loadAll();
+      } else {
+        _stopPolling();
+      }
+    });
     // Cancel timer when provider is disposed
     ref.onDispose(() {
       _pollingTimer?.cancel();
@@ -61,6 +71,11 @@ class FriendsNotifier extends Notifier<FriendsState> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       loadAll();
     });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   Future<void> loadAll() async {
@@ -121,4 +136,3 @@ class FriendsNotifier extends Notifier<FriendsState> {
 final friendsProvider = NotifierProvider<FriendsNotifier, FriendsState>(
   FriendsNotifier.new,
 );
-

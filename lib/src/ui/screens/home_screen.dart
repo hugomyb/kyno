@@ -7,8 +7,8 @@ import '../../models/program.dart';
 import '../../models/session.dart';
 import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
+import '../../providers/streak_provider.dart';
 import '../../providers/notifications_provider.dart';
-import '../../utils/streak.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -18,10 +18,11 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(appDataProvider);
     final notificationsState = ref.watch(notificationsProvider);
-    final profile = state.profile;
-    final program = state.program;
+    final profile = ref.watch(appDataProvider.select((s) => s.profile));
+    final program = ref.watch(appDataProvider.select((s) => s.program));
+    final sessions = ref.watch(appDataProvider.select((s) => s.sessions));
+    final workoutSessions = ref.watch(appDataProvider.select((s) => s.workoutSessions));
     final todayDay = DateTime.now().weekday;
     final day = program.days.firstWhere(
       (d) => d.dayOfWeek == todayDay,
@@ -40,7 +41,7 @@ class HomeScreen extends ConsumerWidget {
             notes: null,
             groups: const [],
           )
-        : state.sessions.firstWhere(
+        : sessions.firstWhere(
             (s) => s.id == sessionId,
             orElse: () => TrainingSessionTemplate(
               id: '',
@@ -49,9 +50,9 @@ class HomeScreen extends ConsumerWidget {
               groups: const [],
             ),
           );
-    final streak = calculateProgramStreak(state.program, state.workoutSessions);
+    final streak = ref.watch(streakProvider);
     final isLoading =
-        profile.id == 'profile' && state.sessions.isEmpty && state.workoutSessions.isEmpty;
+        profile.id == 'profile' && sessions.isEmpty && workoutSessions.isEmpty;
 
     final userName = profile.name.isNotEmpty ? profile.name : 'Athlète';
 
@@ -85,11 +86,11 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   _todayCard(context, session),
                   const SizedBox(height: 24),
-                  _sessionPicker(context, state.sessions),
+                  _sessionPicker(context, sessions),
                   const SizedBox(height: 24),
                   _quickActions(context),
                   const SizedBox(height: 24),
-                  _historyCard(context, state.workoutSessions),
+                  _historyCard(context, workoutSessions),
                 ],
               ],
             ),

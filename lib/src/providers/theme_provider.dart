@@ -8,20 +8,15 @@ class ThemeNotifier extends Notifier<ThemeMode> {
 
   @override
   ThemeMode build() {
-    _loadTheme();
-    return ThemeMode.dark; // Default
-  }
-
-  Future<void> _loadTheme() async {
     final storage = ref.read(storageProvider);
     final savedMode = storage.getString(_storageKey);
-    
     if (savedMode != null) {
-      state = ThemeMode.values.firstWhere(
+      return ThemeMode.values.firstWhere(
         (mode) => mode.name == savedMode,
         orElse: () => ThemeMode.dark,
       );
     }
+    return ThemeMode.dark; // Default
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -41,4 +36,3 @@ class ThemeNotifier extends Notifier<ThemeMode> {
 final themeProvider = NotifierProvider<ThemeNotifier, ThemeMode>(
   ThemeNotifier.new,
 );
-

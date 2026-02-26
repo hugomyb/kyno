@@ -77,6 +77,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   bool _soundInitialized = false;
   bool _audioUnlocked = false;
   WorkoutSessionLog? _completedSession;
+  Map<String, String> _lastPerformanceByExerciseId = {};
 
   @override
   void initState() {
@@ -991,45 +992,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       _infoPill(icon: Icons.scale_outlined, label: load),
     ];
 
-    final lastPerf = _getLastPerformance(exercise.exerciseId);
+    final lastPerf = _lastPerformanceByExerciseId[exercise.exerciseId];
     if (lastPerf != null) {
       badges.add(_lastPerformancePill(lastPerf));
     }
 
     return badges;
-  }
-
-  String? _getLastPerformance(String exerciseId) {
-    final workoutSessions = ref.read(appDataProvider).workoutSessions;
-
-    // Sort by date descending
-    final sorted = [...workoutSessions]
-      ..sort((a, b) => b.dateIso.compareTo(a.dateIso));
-
-    // Find the most recent session with this exercise
-    for (final session in sorted) {
-      final exerciseLog = session.exerciseLogs.firstWhere(
-        (log) => log.exerciseId == exerciseId,
-        orElse: () => WorkoutExerciseLog(
-          exerciseId: null,
-          exerciseName: '',
-          sets: [],
-        ),
-      );
-
-      if (exerciseLog.sets.isNotEmpty) {
-        // Get the best set (max weight)
-        final bestSet = exerciseLog.sets.reduce((a, b) => a.weight > b.weight ? a : b);
-
-        if (bestSet.weight > 0) {
-          return '${formatDecimalFr(bestSet.weight)}kg × ${bestSet.reps}';
-        } else if (bestSet.reps > 0) {
-          return '${bestSet.reps} reps';
-        }
-      }
-    }
-
-    return null;
   }
 
   Widget _lastPerformancePill(String performance) {
@@ -1286,7 +1254,31 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _remainingSeconds = 0;
     _stage = WorkoutStage.recap;
     _sessionReady = true;
+    _lastPerformanceByExerciseId = _buildLastPerformanceMap();
     setState(() {});
+  }
+
+  Map<String, String> _buildLastPerformanceMap() {
+    final workoutSessions = ref.read(appDataProvider).workoutSessions;
+    final sorted = [...workoutSessions]
+      ..sort((a, b) => b.dateIso.compareTo(a.dateIso));
+    final map = <String, String>{};
+
+    for (final session in sorted) {
+      for (final log in session.exerciseLogs) {
+        final exerciseId = log.exerciseId;
+        if (exerciseId == null || map.containsKey(exerciseId)) continue;
+        if (log.sets.isEmpty) continue;
+        final bestSet = log.sets.reduce((a, b) => a.weight > b.weight ? a : b);
+        if (bestSet.weight > 0) {
+          map[exerciseId] = '${formatDecimalFr(bestSet.weight)}kg × ${bestSet.reps}';
+        } else if (bestSet.reps > 0) {
+          map[exerciseId] = '${bestSet.reps} reps';
+        }
+      }
+    }
+
+    return map;
   }
 
   List<WorkoutStep> _buildSteps(TrainingSessionTemplate session) {

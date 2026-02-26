@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/notification.dart';
 import '../services/api_service.dart';
+import 'app_lifecycle_provider.dart';
 import 'service_providers.dart';
 
 class NotificationsState {
@@ -49,6 +51,14 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     Future.microtask(() => loadAll());
     // Start polling every 10 seconds
     _startPolling();
+    ref.listen<AppLifecycleState>(appLifecycleProvider, (previous, next) {
+      if (next == AppLifecycleState.resumed) {
+        _startPolling();
+        loadAll();
+      } else {
+        _stopPolling();
+      }
+    });
     // Cancel timer when provider is disposed
     ref.onDispose(() {
       _pollingTimer?.cancel();
@@ -61,6 +71,11 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       loadAll();
     });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   Future<void> loadAll() async {
@@ -101,4 +116,3 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
 final notificationsProvider = NotifierProvider<NotificationsNotifier, NotificationsState>(
   NotificationsNotifier.new,
 );
-

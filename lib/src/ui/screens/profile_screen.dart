@@ -9,8 +9,9 @@ import '../../models/profile.dart';
 import '../../providers/app_data_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../providers/streak_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../utils/number_format.dart';
-import '../../utils/streak.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -62,10 +63,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final appData = ref.watch(appDataProvider);
-    final profile = appData.profile;
-    final history = appData.weightEntries;
-    final streak = calculateProgramStreak(appData.program, appData.workoutSessions);
+    final profile = ref.watch(appDataProvider.select((s) => s.profile));
+    final history = ref.watch(appDataProvider.select((s) => s.weightEntries));
+    final stats = ref.watch(userStatsProvider);
+    final streak = ref.watch(streakProvider);
 
     if (!_didInitFromProfile && profile.id != 'profile') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -130,7 +131,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       }
                       return Column(
                         children: [
-                          _statsGrid(context, appData),
+                          _statsGrid(context, stats),
                         ],
                       );
                     },
@@ -467,101 +468,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  Widget _statsGrid(BuildContext context, AppData appData) {
-    final workouts = appData.workoutSessions;
-    final totalSessions = workouts.length;
-    final totalMinutes = workouts.fold<int>(
-      0,
-      (sum, session) => sum + session.durationMinutes,
-    );
-    final avgMinutes = totalSessions == 0 ? 0 : (totalMinutes / totalSessions);
-    final totalExercises = workouts.fold<int>(
-      0,
-      (sum, session) => sum + session.exerciseLogs.length,
-    );
-    final totalSets = workouts.fold<int>(
-      0,
-      (sum, session) => sum + session.exerciseLogs.fold<int>(
-            0,
-            (inner, log) => inner + log.sets.length,
-          ),
-    );
-    final totalVolume = workouts.fold<double>(
-      0,
-      (sum, session) => sum +
-          session.exerciseLogs.fold<double>(
-            0,
-            (inner, log) => inner +
-                log.sets.fold<double>(
-                  0,
-                  (setSum, set) => setSum + (set.weight * set.reps),
-                ),
-          ),
-    );
+  Widget _statsGrid(BuildContext context, UserStats stats) {
+    final hours = stats.totalMinutes ~/ 60;
+    final minutesRemainder = stats.totalMinutes % 60;
+    final avgMinutesLabel = '${formatDecimalFr(stats.avgMinutes)} min';
+    final totalTimeLabel =
+        hours > 0 ? '${hours}h ${minutesRemainder}m' : '${stats.totalMinutes} min';
+    final volumeLabel = '${formatDecimalFr(stats.totalVolume)} kg';
 
-    final uniqueDays = <String>{};
-    final exerciseCounts = <String, int>{};
-    for (final session in workouts) {
-      final date = DateTime.tryParse(session.dateIso);
-      if (date != null) {
-        final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-        uniqueDays.add(key);
-      }
-      for (final log in session.exerciseLogs) {
-        final name = log.exerciseName.trim();
-        if (name.isEmpty) continue;
-        exerciseCounts[name] = (exerciseCounts[name] ?? 0) + 1;
-      }
-    }
-
-    String? topExercise;
-    int topCount = 0;
-    exerciseCounts.forEach((name, count) {
-      if (count > topCount) {
-        topCount = count;
-        topExercise = name;
-      }
-    });
-
-    final hours = totalMinutes ~/ 60;
-    final minutesRemainder = totalMinutes % 60;
-    final avgMinutesLabel = '${formatDecimalFr(avgMinutes)} min';
-    final totalTimeLabel = hours > 0 ? '${hours}h ${minutesRemainder}m' : '${totalMinutes} min';
-    final volumeLabel = '${formatDecimalFr(totalVolume)} kg';
-
-    final stats = [
-      _StatItem('Séances totales', totalSessions.toString(), 'séances'),
+    final statsItems = [
+      _StatItem('Séances totales', stats.totalSessions.toString(), 'séances'),
       _StatItem('Temps total', totalTimeLabel, 'durée cumulée'),
       _StatItem('Durée moyenne', avgMinutesLabel, 'par séance'),
-      _StatItem('Jours actifs', uniqueDays.length.toString(), 'jours'),
-      _StatItem('Exercices réalisés', totalExercises.toString(), 'exercices'),
-      _StatItem('Séries réalisées', totalSets.toString(), 'séries'),
+      _StatItem('Jours actifs', stats.activeDays.toString(), 'jours'),
+      _StatItem('Exercices réalisés', stats.totalExercises.toString(), 'exercices'),
+      _StatItem('Séries réalisées', stats.totalSets.toString(), 'séries'),
       _StatItem('Volume total', volumeLabel, 'charge totale'),
-      _StatItem('Exercice favori', topExercise ?? '—', 'le plus fait'),
+      _StatItem('Exercice favori', stats.topExercise ?? '—', 'le plus fait'),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 680 ? 3 : 2;
+        final isNarrow = constraints.maxWidth < 380;
+        final ratio = isNarrow ? 2.8 : 2.3;
         return GridView.count(
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 2.3,
+          childAspectRatio: ratio,
           children: [
-            for (final stat in stats) _statCard(context, stat),
+            for (final stat in statsItems) _statCard(context, stat, isNarrow),
           ],
         );
       },
     );
   }
 
-  Widget _statCard(BuildContext context, _StatItem stat) {
+  Widget _statCard(BuildContext context, _StatItem stat, bool isNarrow) {
     final colors = context.themeColors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isNarrow ? 12 : 16, vertical: 12),
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -578,12 +527,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               fontWeight: FontWeight.w700,
               color: colors.textSecondary,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Text(
             stat.value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isNarrow ? 16 : 18,
               fontWeight: FontWeight.w800,
               color: colors.textPrimary,
             ),
@@ -591,7 +542,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             overflow: TextOverflow.ellipsis,
           ),
           if (stat.caption != null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               stat.caption!,
               style: TextStyle(

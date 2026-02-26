@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/app_lifecycle_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../services/workout_ui_state.dart';
 import '../ui/screens/home_screen.dart';
@@ -20,6 +21,7 @@ import '../ui/screens/sessions_screen.dart';
 import '../ui/screens/workout_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  ref.watch(appLifecycleProvider);
   final authState = ref.watch(authProvider);
 
   return GoRouter(

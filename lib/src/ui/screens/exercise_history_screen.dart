@@ -21,7 +21,6 @@ class ExerciseHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final isDark = ref.watch(themeProvider) == ThemeMode.dark;
     final workoutSessions = ref.watch(appDataProvider).workoutSessions;
 
@@ -416,5 +415,4 @@ class _ChartPoint {
   final double weight;
   final String sessionName;
 }
-
 

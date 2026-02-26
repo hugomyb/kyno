@@ -330,7 +330,7 @@ class _ProgramScreenState extends ConsumerState<ProgramScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.cardBackgroundAlt,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.border),
       ),
