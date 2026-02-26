@@ -24,7 +24,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return const PushSupport(isSupported: false, reason: 'Service worker indisponible');
     }
 
-    final registration = await _getRegistration();
+    final registration = await _ensureRegistration();
     if (registration == null) {
       return const PushSupport(isSupported: false, reason: 'Service worker non actif');
     }
@@ -54,6 +54,32 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
     try {
       final ready = swContainer.ready;
       return await ready.timeout(const Duration(seconds: 3));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<html.ServiceWorkerRegistration?> _ensureRegistration() async {
+    final existing = await _getRegistration();
+    if (existing != null) {
+      return existing;
+    }
+    final swContainer = html.window.navigator.serviceWorker;
+    if (swContainer == null) {
+      return null;
+    }
+    try {
+      final base = html.document.baseUri ?? '/';
+      final swUrl = Uri.parse(base).resolve('flutter_service_worker.js').toString();
+      final scope = Uri.parse(base).path.endsWith('/')
+          ? Uri.parse(base).path
+          : '${Uri.parse(base).path}/';
+      final registration = await swContainer.register(swUrl, {
+        'scope': scope,
+        'updateViaCache': 'none',
+      });
+      await registration.update();
+      return registration;
     } catch (_) {
       return null;
     }
@@ -132,13 +158,17 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return false;
     }
 
-    await _api.registerPushSubscription(
-      endpoint: data.endpoint,
-      p256dhKey: data.p256dhKey,
-      authKey: data.authKey,
-      contentEncoding: _contentEncoding(),
-      userAgent: html.window.navigator.userAgent,
-    );
+    try {
+      await _api.registerPushSubscription(
+        endpoint: data.endpoint,
+        p256dhKey: data.p256dhKey,
+        authKey: data.authKey,
+        contentEncoding: _contentEncoding(),
+        userAgent: html.window.navigator.userAgent,
+      );
+    } catch (_) {
+      return false;
+    }
 
     return true;
   }
