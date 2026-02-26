@@ -193,12 +193,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    _buildVersionLabel(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.themeColors.textSecondary,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _buildVersionLabel() {
+    const buildStamp = String.fromEnvironment('BUILD_STAMP', defaultValue: 'dev');
+    return 'Version: $buildStamp';
   }
 
   Widget _sectionCard(
