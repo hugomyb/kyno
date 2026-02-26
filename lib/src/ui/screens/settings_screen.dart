@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/app_data_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/push_notifications_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/push_notifications_types.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -43,6 +45,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _currentPasswordController.addListener(_onPasswordFieldChanged);
     _newPasswordController.addListener(_onPasswordFieldChanged);
     _confirmPasswordController.addListener(_onPasswordFieldChanged);
+
+    Future.microtask(() => ref.read(pushNotificationsProvider.notifier).refresh());
   }
 
   @override
@@ -120,6 +124,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 20),
+                _sectionCard(
+                  context,
+                  title: 'Notifications push',
+                  icon: Icons.notifications_active_outlined,
+                  child: _pushNotificationsBlock(context),
                 ),
                 const SizedBox(height: 20),
                 _sectionCard(
@@ -237,6 +248,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child,
         ],
       ),
+    );
+  }
+
+  Widget _pushNotificationsBlock(BuildContext context) {
+    final colors = context.themeColors;
+    final state = ref.watch(pushNotificationsProvider);
+
+    final status = switch (state.permission) {
+      PushPermission.granted => 'Autorisees',
+      PushPermission.denied => 'Refusees',
+      PushPermission.prompt => 'A autoriser',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                'Recevoir les notifications',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            Switch.adaptive(
+              value: state.isEnabled,
+              onChanged: state.supported && !state.isLoading
+                  ? (value) => ref.read(pushNotificationsProvider.notifier).toggle(value)
+                  : null,
+              activeColor: colors.primary,
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          state.supported
+              ? 'Statut: $status'
+              : (state.supportReason ?? 'Non disponible sur ce navigateur'),
+          style: TextStyle(
+            fontSize: 13,
+            color: colors.textSecondary,
+          ),
+        ),
+        if (state.error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            state.error!,
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.error,
+            ),
+          ),
+        ],
+      ],
     );
   }
 

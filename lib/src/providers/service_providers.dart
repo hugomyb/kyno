@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_client.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/push_notifications_service.dart';
 import '../services/storage_service.dart';
 
 final storageProvider = Provider<StorageService>((ref) {
@@ -22,4 +23,9 @@ final authServiceProvider = Provider<AuthService>((ref) {
 final apiServiceProvider = Provider<ApiService>((ref) {
   final client = ref.watch(apiClientProvider);
   return ApiService(client);
+});
+
+final pushNotificationsServiceProvider = Provider<PushNotificationsService>((ref) {
+  final api = ref.watch(apiServiceProvider);
+  return createPushNotificationsService(api);
 });

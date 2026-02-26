@@ -459,4 +459,41 @@ class ApiService {
     if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
     if (res.statusCode != 200) throw ApiException('Reject failed', res.statusCode);
   }
+
+  // Push notifications
+  Future<String> fetchVapidPublicKey() async {
+    final res = await _client.get('$_base/push/vapid-public-key');
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Push key failed', res.statusCode);
+    final json = _client.decodeJson(res.body) as Map<String, dynamic>;
+    return json['public_key']?.toString() ?? '';
+  }
+
+  Future<void> registerPushSubscription({
+    required String endpoint,
+    required String p256dhKey,
+    required String authKey,
+    String? contentEncoding,
+    String? userAgent,
+  }) async {
+    final res = await _client.post('$_base/push/subscriptions', {
+      'endpoint': endpoint,
+      'p256dh_key': p256dhKey,
+      'auth_key': authKey,
+      'content_encoding': contentEncoding,
+      'user_agent': userAgent,
+    });
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 201) throw ApiException('Push subscribe failed', res.statusCode);
+  }
+
+  Future<void> unregisterPushSubscription({
+    required String endpoint,
+  }) async {
+    final res = await _client.post('$_base/push/subscriptions/delete', {
+      'endpoint': endpoint,
+    });
+    if (res.statusCode == 401) throw UnauthorizedException('Unauthorized');
+    if (res.statusCode != 200) throw ApiException('Push unsubscribe failed', res.statusCode);
+  }
 }

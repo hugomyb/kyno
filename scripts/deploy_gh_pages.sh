@@ -24,6 +24,8 @@ if [ ! -d "${BUILD_DIR}" ]; then
   exit 1
 fi
 
+./scripts/patch_flutter_service_worker_for_push.sh "${BUILD_DIR}"
+
 STAMP="$(date -u +%Y%m%d%H%M%S)"
 if [ -f "${BUILD_DIR}/index.html" ]; then
   sed -i.bak "s/__BUILD_STAMP__/${STAMP}/g" "${BUILD_DIR}/index.html"

@@ -106,6 +106,11 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> forceLogout() async {
+    try {
+      await ref.read(pushNotificationsServiceProvider).disable();
+    } catch (_) {
+      // Ignore failures on logout.
+    }
     await _storage.clearAuthToken();
     state = AuthState.unauthenticated();
     // Invalidate app data provider to reset it
