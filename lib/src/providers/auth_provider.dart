@@ -99,6 +99,8 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> logout() async {
     try {
       await _authService.logout();
+    } on UnauthorizedException {
+      // Token already invalid; proceed with local logout.
     } on ApiException {
       // Ignore API errors on logout.
     }

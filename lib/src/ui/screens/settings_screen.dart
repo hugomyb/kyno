@@ -312,16 +312,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: colors.textSecondary,
           ),
         ),
-        if (state.lastCheckedAt != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Dernier check: ${state.lastCheckedAt}',
-            style: TextStyle(
-              fontSize: 10,
-              color: colors.textSecondary,
-            ),
+        const SizedBox(height: 4),
+        Text(
+          'Dernier check: ${state.lastCheckedAt ?? 'jamais'}',
+          style: TextStyle(
+            fontSize: 10,
+            color: colors.textSecondary,
           ),
-        ],
+        ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: state.isLoading
+                ? null
+                : () => ref.read(pushNotificationsProvider.notifier).refresh(),
+            child: const Text('Relancer diagnostic'),
+          ),
+        ),
         if (state.error != null) ...[
           const SizedBox(height: 6),
           Text(
