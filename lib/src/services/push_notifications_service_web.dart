@@ -158,17 +158,13 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return false;
     }
 
-    try {
-      await _api.registerPushSubscription(
-        endpoint: data.endpoint,
-        p256dhKey: data.p256dhKey,
-        authKey: data.authKey,
-        contentEncoding: _contentEncoding(),
-        userAgent: html.window.navigator.userAgent,
-      );
-    } catch (_) {
-      return false;
-    }
+    await _api.registerPushSubscription(
+      endpoint: data.endpoint,
+      p256dhKey: data.p256dhKey,
+      authKey: data.authKey,
+      contentEncoding: _contentEncoding(),
+      userAgent: html.window.navigator.userAgent,
+    );
 
     return true;
   }

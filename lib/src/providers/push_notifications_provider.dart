@@ -81,6 +81,17 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       if (!enabled && permission == PushPermission.granted) {
         // Permission already granted; attempt to create/restore subscription.
         enabled = await _service.enable();
+        if (!enabled) {
+          state = state.copyWith(
+            supported: true,
+            supportReason: support.reason,
+            permission: permission,
+            isEnabled: false,
+            isLoading: false,
+            error: 'Autorisees mais abonnement non cree',
+          );
+          return;
+        }
       }
       state = state.copyWith(
         supported: true,
@@ -120,10 +131,10 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
         await refresh();
         return;
       }
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Erreur lors de la mise a jour des notifications',
+        error: 'Erreur lors de la mise a jour des notifications: $e',
       );
     }
   }
