@@ -147,6 +147,17 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                 ),
               ),
             ),
+          if (_stage == WorkoutStage.running)
+            Positioned(
+              left: 20,
+              top: 20,
+              child: SafeArea(
+                child: IconButton(
+                  onPressed: () => _openSessionOverview(session),
+                  icon: const Icon(Icons.list_alt),
+                ),
+              ),
+            ),
           Positioned(
             right: 20,
             top: 20,
@@ -227,32 +238,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (_soundEnabled && !_audioUnlocked)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: colors.primary.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.volume_up, color: colors.primary, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Cliquez sur Démarrer pour activer le son',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       SizedBox(
                         height: 56,
                         width: double.infinity,
@@ -662,8 +647,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                     ),
                     if (!isRest && step.exercise != null) ...[
                       const SizedBox(height: 12),
-                      if (_getLastPerformance(step.exercise!.exerciseId) != null)
-                        _lastPerformancePill(_getLastPerformance(step.exercise!.exerciseId)!),
                     ],
                     const SizedBox(height: 16),
                     if (isTimed)
@@ -1008,7 +991,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       _infoPill(icon: Icons.scale_outlined, label: load),
     ];
 
-    // Add last performance if available
     final lastPerf = _getLastPerformance(exercise.exerciseId);
     if (lastPerf != null) {
       badges.add(_lastPerformancePill(lastPerf));
@@ -1037,9 +1019,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
       if (exerciseLog.sets.isNotEmpty) {
         // Get the best set (max weight)
-        final bestSet = exerciseLog.sets.reduce((a, b) =>
-          a.weight > b.weight ? a : b
-        );
+        final bestSet = exerciseLog.sets.reduce((a, b) => a.weight > b.weight ? a : b);
 
         if (bestSet.weight > 0) {
           return '${formatDecimalFr(bestSet.weight)}kg × ${bestSet.reps}';
@@ -1376,6 +1356,199 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       }
     }
     return steps;
+  }
+
+  void _openSessionOverview(TrainingSessionTemplate session) {
+    if (_steps.isEmpty) return;
+    final totalExerciseSteps =
+        _steps.where((step) => step.type == WorkoutStepType.exercise).length;
+    final completedExerciseSteps = _steps
+        .asMap()
+        .entries
+        .where((entry) =>
+            entry.value.type == WorkoutStepType.exercise && entry.key < _currentStepIndex)
+        .length;
+    final progress = totalExerciseSteps == 0 ? 0.0 : completedExerciseSteps / totalExerciseSteps;
+
+    final exerciseKeys = <SessionExerciseConfig, String>{};
+    final exerciseOrder = <SessionExerciseConfig>[];
+    for (var g = 0; g < session.groups.length; g++) {
+      final group = session.groups[g];
+      for (var e = 0; e < group.exercises.length; e++) {
+        final exercise = group.exercises[e];
+        final key = '$g:$e';
+        exerciseKeys[exercise] = key;
+        exerciseOrder.add(exercise);
+      }
+    }
+
+    final totalByKey = <String, int>{};
+    for (var g = 0; g < session.groups.length; g++) {
+      final group = session.groups[g];
+      for (var e = 0; e < group.exercises.length; e++) {
+        totalByKey['$g:$e'] = group.rounds;
+      }
+    }
+
+    final completedByKey = <String, int>{};
+    for (var i = 0; i < _steps.length; i++) {
+      if (i >= _currentStepIndex) break;
+      final step = _steps[i];
+      if (step.type != WorkoutStepType.exercise || step.exercise == null) continue;
+      final key = exerciseKeys[step.exercise!];
+      if (key == null) continue;
+      completedByKey[key] = (completedByKey[key] ?? 0) + 1;
+    }
+
+    String? currentKey;
+    if (_currentStepIndex >= 0 && _currentStepIndex < _steps.length) {
+      final currentStep = _steps[_currentStepIndex];
+      if (currentStep.type == WorkoutStepType.exercise && currentStep.exercise != null) {
+        currentKey = exerciseKeys[currentStep.exercise!];
+      } else if (currentStep.type == WorkoutStepType.rest) {
+        for (var i = _currentStepIndex - 1; i >= 0; i--) {
+          final step = _steps[i];
+          if (step.type == WorkoutStepType.exercise && step.exercise != null) {
+            currentKey = exerciseKeys[step.exercise!];
+            break;
+          }
+        }
+      }
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final colors = context.themeColors;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final maxHeight = constraints.maxHeight * 0.85;
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.cardBackground,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colors.border.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        session.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 8,
+                                backgroundColor: colors.border.withValues(alpha: 0.35),
+                                color: colors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${(progress * 100).round()}%',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: exerciseOrder.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final exercise = exerciseOrder[index];
+                          final key = exerciseKeys[exercise] ?? '';
+                          final total = totalByKey[key] ?? 0;
+                          final completed = completedByKey[key] ?? 0;
+                          final isCurrent = key == currentKey;
+                          final isDone = total > 0 && completed >= total;
+                          final emoji = isDone
+                              ? '✅'
+                              : isCurrent
+                                  ? '⏳'
+                                  : '⭕️';
+                          final name = exercise.exercise?.name ?? 'Exercice';
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: colors.cardBackgroundAlt,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(emoji, style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.textPrimary,
+                                        ),
+                                      ),
+                                      if (total > 1)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            '$completed / $total',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: colors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _startFromRecap() {

@@ -66,6 +66,7 @@ class AppData {
         femurLength: 'normal',
         limitations: <String>[],
         goal: '',
+        streak: 0,
         startTimerSeconds: 5,
         soundEnabled: true,
         weightHistory: <WeightEntry>[],

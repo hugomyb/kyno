@@ -12,6 +12,7 @@ import '../../providers/friends_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../utils/number_format.dart';
+import '../../utils/streak.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -77,8 +78,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(appDataProvider).profile;
-    final history = ref.watch(appDataProvider).weightEntries;
+    final appData = ref.watch(appDataProvider);
+    final profile = appData.profile;
+    final history = appData.weightEntries;
+    final streak = calculateProgramStreak(appData.program, appData.workoutSessions);
 
     if (!_didInitFromProfile && profile.id != 'profile') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -116,7 +119,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
-                _userInfoCard(context, profile),
+                _userInfoCard(context, profile, streak),
                 const SizedBox(height: 16),
                 _socialCard(context),
                 const SizedBox(height: 24),
@@ -134,7 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _userInfoCard(BuildContext context, Profile profile) {
+  Widget _userInfoCard(BuildContext context, Profile profile, int streak) {
     final colors = context.themeColors;
     final userName = profile.name.isNotEmpty ? profile.name : 'Athlète';
 
@@ -204,6 +207,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
+                Text(
+                  '$streak',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
                   ),
                 ),
               ],

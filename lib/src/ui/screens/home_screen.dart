@@ -8,6 +8,7 @@ import '../../models/session.dart';
 import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../utils/streak.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -48,6 +49,7 @@ class HomeScreen extends ConsumerWidget {
               groups: const [],
             ),
           );
+    final streak = calculateProgramStreak(state.program, state.workoutSessions);
 
     final userName = profile.name.isNotEmpty ? profile.name : 'Athlète';
 
@@ -66,6 +68,8 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
+                _streakCard(context, streak),
+                const SizedBox(height: 16),
                 _todayCard(context, session),
                 const SizedBox(height: 24),
                 _sessionPicker(context, state.sessions),
@@ -77,6 +81,121 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _streakCard(BuildContext context, int streak) {
+    final colors = context.themeColors;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showStreakInfo(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.5),
+              width: 1,
+            ),
+            boxShadow: colors.cardShadow,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text('🔥', style: TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Streak en cours',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
+              Text(
+                '$streak',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStreakInfo(BuildContext context) {
+    final colors = context.themeColors;
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text('🔥', style: TextStyle(fontSize: 16)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Streak',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Ta streak compte un point pour chaque jour où tu fais une séance. '
+                'Sur un jour planifié, n’importe quelle séance valide la journée. '
+                'Sur un jour de repos, une séance ajoute aussi un point. '
+                'Tu as 1 jour de grâce si tu loupes une séance planifiée.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ class Profile {
     required this.femurLength,
     required this.limitations,
     required this.goal,
+    required this.streak,
     required this.startTimerSeconds,
     required this.soundEnabled,
     required this.weightHistory,
@@ -21,6 +22,7 @@ class Profile {
   final String femurLength;
   final List<String> limitations;
   final String goal;
+  final int streak;
   final int startTimerSeconds;
   final bool soundEnabled;
   final List<WeightEntry> weightHistory;
@@ -33,6 +35,7 @@ class Profile {
     String? femurLength,
     List<String>? limitations,
     String? goal,
+    int? streak,
     int? startTimerSeconds,
     bool? soundEnabled,
     List<WeightEntry>? weightHistory,
@@ -46,6 +49,7 @@ class Profile {
       femurLength: femurLength ?? this.femurLength,
       limitations: limitations ?? this.limitations,
       goal: goal ?? this.goal,
+      streak: streak ?? this.streak,
       startTimerSeconds: startTimerSeconds ?? this.startTimerSeconds,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       weightHistory: weightHistory ?? this.weightHistory,
@@ -62,6 +66,7 @@ class Profile {
       'femur_length': femurLength,
       'limitations': limitations,
       'goal': goal,
+      'streak': streak,
       'start_timer_seconds': startTimerSeconds,
       'sound_enabled': soundEnabled,
       'weight_history': weightHistory.map((e) => e.toJson()).toList(),
@@ -78,6 +83,7 @@ class Profile {
       femurLength: (json['femur_length'] as String?) ?? 'normal',
       limitations: (json['limitations'] as List?)?.cast<String>() ?? <String>[],
       goal: (json['goal'] as String?) ?? '',
+      streak: (json['streak'] as num?)?.toInt() ?? 0,
       startTimerSeconds: (json['start_timer_seconds'] as num?)?.toInt() ?? 5,
       soundEnabled: (json['sound_enabled'] as bool?) ?? true,
       weightHistory: (json['weight_history'] as List?)
