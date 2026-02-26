@@ -24,6 +24,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _currentPasswordController;
   late TextEditingController _newPasswordController;
   late TextEditingController _confirmPasswordController;
+  ProviderSubscription<AuthState>? _authSub;
 
   bool _didInitFromProfile = false;
   bool _timerDirty = false;
@@ -46,17 +47,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _newPasswordController.addListener(_onPasswordFieldChanged);
     _confirmPasswordController.addListener(_onPasswordFieldChanged);
 
-    Future.microtask(() => ref.read(pushNotificationsProvider.notifier).refresh());
-
-    ref.listen<AuthState>(authProvider, (previous, next) {
+    _authSub = ref.listenManual<AuthState>(authProvider, (previous, next) {
       if (previous?.isAuthenticated == true && !next.isAuthenticated && mounted) {
         context.go('/login');
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(pushNotificationsProvider.notifier).refresh();
     });
   }
 
   @override
   void dispose() {
+    _authSub?.close();
     _startTimerController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
@@ -189,8 +194,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     height: 48,
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        ref.read(authProvider.notifier).forceLogout();
+                      onPressed: () async {
+                        await ref.read(authProvider.notifier).forceLogout();
+                        if (!context.mounted) return;
                         context.go('/login');
                       },
                       icon: const Icon(Icons.logout),

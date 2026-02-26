@@ -18,7 +18,7 @@ fi
 
 STAMP="$(date -u +%Y%m%d%H%M%S)"
 
-echo "Building Flutter web with base href ${BASE_HREF}"
+echo "Building Flutter web with base href ${BASE_HREF} (BUILD_STAMP=${STAMP})"
 flutter build web --release --base-href "${BASE_HREF}" --dart-define=BUILD_STAMP="${STAMP}"
 
 if [ ! -d "${BUILD_DIR}" ]; then
