@@ -24,6 +24,12 @@ if [ ! -d "${BUILD_DIR}" ]; then
   exit 1
 fi
 
+STAMP="$(date -u +%Y%m%d%H%M%S)"
+if [ -f "${BUILD_DIR}/index.html" ]; then
+  sed -i.bak "s/__BUILD_STAMP__/${STAMP}/g" "${BUILD_DIR}/index.html"
+  rm -f "${BUILD_DIR}/index.html.bak"
+fi
+
 # Create or reuse the gh-pages worktree
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
   :
