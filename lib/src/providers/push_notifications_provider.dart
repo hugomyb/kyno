@@ -11,6 +11,7 @@ class PushNotificationsState {
     this.supportReason,
     this.isLoading = false,
     this.error,
+    this.lastAttempt,
   });
 
   final bool supported;
@@ -19,6 +20,7 @@ class PushNotificationsState {
   final String? supportReason;
   final bool isLoading;
   final String? error;
+  final String? lastAttempt;
 
   PushNotificationsState copyWith({
     bool? supported,
@@ -27,6 +29,7 @@ class PushNotificationsState {
     String? supportReason,
     bool? isLoading,
     String? error,
+    String? lastAttempt,
   }) {
     return PushNotificationsState(
       supported: supported ?? this.supported,
@@ -35,6 +38,7 @@ class PushNotificationsState {
       supportReason: supportReason ?? this.supportReason,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      lastAttempt: lastAttempt ?? this.lastAttempt,
     );
   }
 
@@ -46,6 +50,7 @@ class PushNotificationsState {
       supportReason: null,
       isLoading: false,
       error: null,
+      lastAttempt: null,
     );
   }
 }
@@ -118,6 +123,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
           state = state.copyWith(
             isLoading: false,
             error: 'Autorisation refusée ou configuration manquante',
+            lastAttempt: 'enable:false',
           );
           await refresh();
           return;
@@ -135,6 +141,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       state = state.copyWith(
         isLoading: false,
         error: 'Erreur lors de la mise a jour des notifications: $e',
+        lastAttempt: 'error:$e',
       );
     }
   }

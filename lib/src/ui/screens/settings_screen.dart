@@ -293,7 +293,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final state = ref.watch(pushNotificationsProvider);
 
     final status = switch (state.permission) {
-      PushPermission.granted => 'Autorisees',
+      PushPermission.granted => 'Autorisées',
       PushPermission.denied => 'Refusees',
       PushPermission.prompt => 'A autoriser',
     };
@@ -340,6 +340,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(
               fontSize: 12,
               color: colors.error,
+            ),
+          ),
+        ],
+        if (state.lastAttempt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Derniere tentative: ${state.lastAttempt}',
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.textSecondary,
             ),
           ),
         ],
