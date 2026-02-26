@@ -128,6 +128,10 @@ class NavScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    if (!authState.isAuthenticated) {
+      return const LoginScreen();
+    }
     final location = GoRouterState.of(context).uri.path;
     final unreadCount = ref.watch(notificationsProvider.select((s) => s.unreadCount));
 

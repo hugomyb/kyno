@@ -47,6 +47,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _confirmPasswordController.addListener(_onPasswordFieldChanged);
 
     Future.microtask(() => ref.read(pushNotificationsProvider.notifier).refresh());
+
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.isAuthenticated == true && !next.isAuthenticated && mounted) {
+        context.go('/login');
+      }
+    });
   }
 
   @override
@@ -182,11 +188,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: SizedBox(
                     height: 48,
                     width: double.infinity,
-                      child: OutlinedButton.icon(
-                      onPressed: () {
-                        ref.read(authProvider.notifier).logout();
-                        context.go('/login');
-                      },
+                    child: OutlinedButton.icon(
+                      onPressed: () => ref.read(authProvider.notifier).logout(),
                       icon: const Icon(Icons.logout),
                       label: const Text('Se déconnecter'),
                       style: OutlinedButton.styleFrom(
