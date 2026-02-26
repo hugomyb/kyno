@@ -16,8 +16,10 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
+STAMP="$(date -u +%Y%m%d%H%M%S)"
+
 echo "Building Flutter web with base href ${BASE_HREF}"
-flutter build web --release --base-href "${BASE_HREF}"
+flutter build web --release --base-href "${BASE_HREF}" --dart-define=BUILD_STAMP="${STAMP}"
 
 if [ ! -d "${BUILD_DIR}" ]; then
   echo "Build output not found at ${BUILD_DIR}" >&2
@@ -26,7 +28,6 @@ fi
 
 ./scripts/patch_flutter_service_worker_for_push.sh "${BUILD_DIR}"
 
-STAMP="$(date -u +%Y%m%d%H%M%S)"
 if [ -f "${BUILD_DIR}/index.html" ]; then
   sed -i.bak "s/__BUILD_STAMP__/${STAMP}/g" "${BUILD_DIR}/index.html"
   rm -f "${BUILD_DIR}/index.html.bak"
