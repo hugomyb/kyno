@@ -20,12 +20,23 @@ import '../ui/screens/session_editor_screen.dart';
 import '../ui/screens/sessions_screen.dart';
 import '../ui/screens/workout_screen.dart';
 
+final routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
+  final notifier = ValueNotifier<int>(0);
+  ref.listen<AuthState>(authProvider, (_, __) {
+    notifier.value++;
+  });
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   ref.watch(appLifecycleProvider);
+  final refreshListenable = ref.watch(routerRefreshProvider);
   final authState = ref.watch(authProvider);
 
   return GoRouter(
     initialLocation: authState.isAuthenticated ? '/' : '/login',
+    refreshListenable: refreshListenable,
     routes: [
       GoRoute(
         path: '/login',

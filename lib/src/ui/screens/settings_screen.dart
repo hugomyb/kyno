@@ -182,8 +182,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: SizedBox(
                     height: 48,
                     width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => ref.read(authProvider.notifier).logout(),
+                      child: OutlinedButton.icon(
+                      onPressed: () {
+                        ref.read(authProvider.notifier).logout();
+                        context.go('/login');
+                      },
                       icon: const Icon(Icons.logout),
                       label: const Text('Se déconnecter'),
                       style: OutlinedButton.styleFrom(
