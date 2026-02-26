@@ -50,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
             ),
           );
     final streak = calculateProgramStreak(state.program, state.workoutSessions);
+    final isLoading =
+        profile.id == 'profile' && state.sessions.isEmpty && state.workoutSessions.isEmpty;
 
     final userName = profile.name.isNotEmpty ? profile.name : 'Athlète';
 
@@ -68,15 +70,27 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
-                _streakCard(context, streak),
-                const SizedBox(height: 16),
-                _todayCard(context, session),
-                const SizedBox(height: 24),
-                _sessionPicker(context, state.sessions),
-                const SizedBox(height: 24),
-                _quickActions(context),
-                const SizedBox(height: 24),
-                _historyCard(context, state.workoutSessions),
+                if (isLoading) ...[
+                  _skeletonStreakCard(context),
+                  const SizedBox(height: 16),
+                  _skeletonTodayCard(context),
+                  const SizedBox(height: 24),
+                  _skeletonSessionPicker(context),
+                  const SizedBox(height: 24),
+                  _skeletonQuickActions(context),
+                  const SizedBox(height: 24),
+                  _skeletonHistoryCard(context),
+                ] else ...[
+                  _streakCard(context, streak),
+                  const SizedBox(height: 16),
+                  _todayCard(context, session),
+                  const SizedBox(height: 24),
+                  _sessionPicker(context, state.sessions),
+                  const SizedBox(height: 24),
+                  _quickActions(context),
+                  const SizedBox(height: 24),
+                  _historyCard(context, state.workoutSessions),
+                ],
               ],
             ),
           ),
@@ -195,6 +209,92 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _skeletonStreakCard(BuildContext context) {
+    return _skeletonCard(context, height: 72);
+  }
+
+  Widget _skeletonTodayCard(BuildContext context) {
+    return _skeletonCard(context, height: 210);
+  }
+
+  Widget _skeletonSessionPicker(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _skeletonLine(context, widthFactor: 0.5, height: 18),
+        const SizedBox(height: 12),
+        _skeletonCard(context, height: 72),
+        const SizedBox(height: 12),
+        _skeletonCard(context, height: 72),
+      ],
+    );
+  }
+
+  Widget _skeletonQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _skeletonLine(context, widthFactor: 0.4, height: 18),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _skeletonCard(context, height: 100)),
+            const SizedBox(width: 12),
+            Expanded(child: _skeletonCard(context, height: 100)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _skeletonHistoryCard(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _skeletonLine(context, widthFactor: 0.35, height: 18),
+        const SizedBox(height: 12),
+        _skeletonCard(context, height: 90),
+      ],
+    );
+  }
+
+  Widget _skeletonCard(BuildContext context, {required double height}) {
+    final colors = context.themeColors;
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.border.withValues(alpha: 0.4)),
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: _skeletonLine(context, widthFactor: 0.6, height: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _skeletonLine(
+    BuildContext context, {
+    required double widthFactor,
+    required double height,
+  }) {
+    final colors = context.themeColors;
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: colors.border.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(999),
         ),
       ),
     );
