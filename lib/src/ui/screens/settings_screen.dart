@@ -7,7 +7,6 @@ import '../../providers/app_data_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/push_notifications_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../services/push_notifications_types.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -292,12 +291,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final colors = context.themeColors;
     final state = ref.watch(pushNotificationsProvider);
 
-    final status = switch (state.permission) {
-      PushPermission.granted => 'Autorisées',
-      PushPermission.denied => 'Refusees',
-      PushPermission.prompt => 'A autoriser',
-    };
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -324,15 +317,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        Text(
-          state.supported
-              ? 'Statut: $status'
-              : (state.supportReason ?? 'Non disponible sur ce navigateur'),
-          style: TextStyle(
-            fontSize: 13,
-            color: colors.textSecondary,
-          ),
-        ),
         if (state.error != null) ...[
           const SizedBox(height: 6),
           Text(
@@ -353,15 +337,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed:
-                state.isLoading ? null : () => ref.read(pushNotificationsProvider.notifier).refresh(),
-            child: const Text('Actualiser'),
-          ),
-        ),
       ],
     );
   }

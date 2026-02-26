@@ -9,15 +9,87 @@ import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
 import '../../providers/streak_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../providers/push_notifications_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/service_providers.dart';
+import '../../services/push_notifications_types.dart';
+import '../../services/storage_service.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _didPrompt = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didPrompt) return;
+    _didPrompt = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybePromptPush();
+    });
+  }
+
+  Future<void> _maybePromptPush() async {
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+    final storage = ref.read(storageProvider);
+    final prompted = storage.getBool(StorageService.pushPromptedKey) ?? false;
+    if (prompted) return;
+
+    await ref.read(pushNotificationsProvider.notifier).refresh();
+    final pushState = ref.read(pushNotificationsProvider);
+    if (!pushState.supported) {
+      await storage.setBool(StorageService.pushPromptedKey, true);
+      return;
+    }
+    if (pushState.permission != PushPermission.prompt) {
+      await storage.setBool(StorageService.pushPromptedKey, true);
+      return;
+    }
+
+    final enable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Activer les notifications ?'),
+        content: const Text('Recevoir des alertes pour les demandes d\'amis et les seances partagees.'),
+        actions: [
+          TextButton(
+            onPressed: () => navigator.pop(false),
+            child: const Text('Plus tard'),
+          ),
+          FilledButton(
+            onPressed: () => navigator.pop(true),
+            child: const Text('Activer'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    await storage.setBool(StorageService.pushPromptedKey, true);
+    if (enable == true) {
+      await storage.setBool(StorageService.pushOptInKey, true);
+      await ref.read(pushNotificationsProvider.notifier).toggle(true);
+    } else {
+      await storage.setBool(StorageService.pushOptInKey, false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final notificationsState = ref.watch(notificationsProvider);
     final profile = ref.watch(appDataProvider.select((s) => s.profile));
     final program = ref.watch(appDataProvider.select((s) => s.program));

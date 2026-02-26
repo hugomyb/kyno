@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/push_notifications_types.dart';
+import '../services/storage_service.dart';
 import 'service_providers.dart';
 
 class PushNotificationsState {
@@ -57,10 +58,12 @@ class PushNotificationsState {
 
 class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
   late final PushNotificationsService _service;
+  late final StorageService _storage;
 
   @override
   PushNotificationsState build() {
     _service = ref.read(pushNotificationsServiceProvider);
+    _storage = ref.read(storageProvider);
     Future.microtask(refresh);
     return PushNotificationsState.initial();
   }
@@ -82,8 +85,9 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       }
 
       final permission = await _service.checkPermission();
-      var enabled = await _service.isSubscribed();
-      if (!enabled && permission == PushPermission.granted) {
+      final optIn = _storage.getBool(StorageService.pushOptInKey) ?? false;
+      var enabled = optIn ? await _service.isSubscribed() : false;
+      if (optIn && !enabled && permission == PushPermission.granted) {
         // Permission already granted; attempt to create/restore subscription.
         try {
           enabled = await _service.enable();
@@ -121,6 +125,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (enable) {
+        await _storage.setBool(StorageService.pushOptInKey, true);
         try {
           await _service.enable();
         } catch (e) {
@@ -129,6 +134,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
             error: 'Autorisation refusée ou configuration manquante: $e',
             lastAttempt: 'enable:$e',
           );
+          await _storage.setBool(StorageService.pushOptInKey, false);
           await refresh();
           return;
         }
@@ -136,6 +142,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
         await refresh();
         return;
       } else {
+        await _storage.setBool(StorageService.pushOptInKey, false);
         await _service.disable();
         state = state.copyWith(isEnabled: false, isLoading: false);
         await refresh();

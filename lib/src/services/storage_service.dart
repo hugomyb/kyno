@@ -6,6 +6,8 @@ class StorageService {
 
   static const String boxName = 'kyno_box';
   static const String authTokenKey = 'auth_token_v1';
+  static const String pushOptInKey = 'push_opt_in_v1';
+  static const String pushPromptedKey = 'push_prompted_v1';
 
   final Box<String> _box;
   final ValueNotifier<int> _authTokenVersion = ValueNotifier<int>(0);
@@ -42,5 +44,17 @@ class StorageService {
 
   Future<void> setString(String key, String value) async {
     await _box.put(key, value);
+  }
+
+  bool? getBool(String key) {
+    final value = _box.get(key);
+    if (value == null) return null;
+    if (value == 'true') return true;
+    if (value == 'false') return false;
+    return null;
+  }
+
+  Future<void> setBool(String key, bool value) async {
+    await _box.put(key, value ? 'true' : 'false');
   }
 }
