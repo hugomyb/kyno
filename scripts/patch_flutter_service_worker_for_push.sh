@@ -10,6 +10,10 @@ if [ ! -f "${SW_FILE}" ]; then
   exit 1
 fi
 
+if grep -q "self.registration.unregister()" "${SW_FILE}"; then
+  perl -0777 -i -pe "s/self.addEventListener\\('activate',[\\s\\S]*?\\);/self.addEventListener('activate', (event) => {\\n  event.waitUntil(self.clients.claim());\\n});/s" "${SW_FILE}"
+fi
+
 if grep -q "${MARKER}" "${SW_FILE}"; then
   exit 0
 fi
