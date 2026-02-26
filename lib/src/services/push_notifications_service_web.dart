@@ -48,6 +48,10 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
     final userAgent = html.window.navigator.userAgent;
     bool serviceWorkerReady = false;
     bool pushManagerSupported = false;
+    bool hasRegistration = false;
+    String registrationScope = '';
+    String registrationScriptUrl = '';
+    String registrationState = '';
     String? serviceWorkerError;
 
     if (serviceWorkerSupported) {
@@ -55,6 +59,12 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
         final registration = await _getRegistration();
         serviceWorkerReady = registration != null;
         pushManagerSupported = registration?.pushManager != null;
+        if (registration != null) {
+          hasRegistration = true;
+          registrationScope = registration.scope ?? '';
+          registrationScriptUrl = registration.active?.scriptUrl ?? '';
+          registrationState = registration.active?.state ?? '';
+        }
       } catch (e) {
         serviceWorkerError = e.toString();
       }
@@ -69,8 +79,33 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       hasServiceWorkerController: hasServiceWorkerController,
       isSecureContext: isSecureContext,
       userAgent: userAgent,
+      hasRegistration: hasRegistration,
+      registrationScope: registrationScope,
+      registrationScriptUrl: registrationScriptUrl,
+      registrationState: registrationState,
+      currentUrl: html.window.location.href,
+      baseUrl: html.document.baseUri ?? '',
       serviceWorkerError: serviceWorkerError,
     );
+  }
+
+  @override
+  Future<bool> forceRegisterServiceWorker() async {
+    final swContainer = html.window.navigator.serviceWorker;
+    if (swContainer == null) {
+      return false;
+    }
+    try {
+      final swUrl = Uri.parse(html.document.baseUri ?? '/')
+          .resolve('flutter_service_worker.js')
+          .toString();
+      final registration = await swContainer.register(swUrl);
+      await registration.update();
+      final ready = await _getRegistration();
+      return ready != null;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override

@@ -139,6 +139,19 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       );
     }
   }
+
+  Future<void> forceRegisterServiceWorker() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _service.forceRegisterServiceWorker();
+      await refresh();
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Impossible de forcer le service worker',
+      );
+    }
+  }
 }
 
 final pushNotificationsProvider = NotifierProvider<PushNotificationsNotifier, PushNotificationsState>(

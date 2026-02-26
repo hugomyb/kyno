@@ -342,14 +342,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: state.isLoading
-                ? null
-                : () => ref.read(pushNotificationsProvider.notifier).refresh(),
-            child: const Text('Relancer diagnostic'),
-          ),
+        Row(
+          children: [
+            TextButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () => ref.read(pushNotificationsProvider.notifier).refresh(),
+              child: const Text('Relancer diagnostic'),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () => ref.read(pushNotificationsProvider.notifier).forceRegisterServiceWorker(),
+              child: const Text('Forcer SW'),
+            ),
+          ],
         ),
         if (state.error != null) ...[
           const SizedBox(height: 6),
@@ -379,6 +387,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 4),
           Text(
             'UA: ${state.diagnostics!.userAgent}',
+            style: TextStyle(
+              fontSize: 10,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'URL: ${state.diagnostics!.currentUrl}',
+            style: TextStyle(
+              fontSize: 10,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Base: ${state.diagnostics!.baseUrl}',
+            style: TextStyle(
+              fontSize: 10,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Reg: ${state.diagnostics!.hasRegistration ? 'yes' : 'no'} | '
+            'scope=${state.diagnostics!.registrationScope} | '
+            'script=${state.diagnostics!.registrationScriptUrl} | '
+            'state=${state.diagnostics!.registrationState}',
             style: TextStyle(
               fontSize: 10,
               color: colors.textSecondary,

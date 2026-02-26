@@ -17,6 +17,11 @@ class _PushNotificationsServiceStub implements PushNotificationsService {
   }
 
   @override
+  Future<bool> forceRegisterServiceWorker() async {
+    return false;
+  }
+
+  @override
   Future<PushPermission> checkPermission() async {
     return PushPermission.denied;
   }
