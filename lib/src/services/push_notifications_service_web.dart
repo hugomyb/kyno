@@ -117,29 +117,29 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
   Future<bool> enable() async {
     final support = await checkSupport();
     if (!support.isSupported) {
-      return false;
+      throw Exception('support:false');
     }
 
     final permission = await _requestPermission();
     if (permission != PushPermission.granted) {
-      return false;
+      throw Exception('permission:$permission');
     }
 
-    final registration = await _getRegistration();
+    final registration = await _ensureRegistration();
     if (registration == null) {
-      return false;
+      throw Exception('registration:null');
     }
 
     final pushManager = registration.pushManager;
     if (pushManager == null) {
-      return false;
+      throw Exception('pushManager:null');
     }
 
     var subscription = await _getSubscription(pushManager);
     if (subscription == null) {
       final publicKey = await _api.fetchVapidPublicKey();
       if (publicKey.trim().isEmpty) {
-        return false;
+        throw Exception('vapid:empty');
       }
 
       final options = {
@@ -149,13 +149,13 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
 
       subscription = await _subscribe(pushManager, options);
       if (subscription == null) {
-        return false;
+        throw Exception('subscribe:null');
       }
     }
 
     final data = _extractSubscription(subscription);
     if (data.endpoint.isEmpty || data.p256dhKey.isEmpty || data.authKey.isEmpty) {
-      return false;
+      throw Exception('subscription:missing-keys');
     }
 
     await _api.registerPushSubscription(
