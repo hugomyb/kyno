@@ -36,7 +36,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.didChangeDependencies();
     if (!_didInitPush) {
       _didInitPush = true;
-      ref.read(pushNotificationsProvider.notifier).refresh();
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(pushNotificationsProvider.notifier).refresh();
+      });
     }
   }
 

@@ -33,14 +33,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.didChangeDependencies();
     if (_didPrompt) return;
     _didPrompt = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       _maybePromptPush();
     });
   }
 
   Future<void> _maybePromptPush() async {
     if (!mounted) return;
-    final navigator = Navigator.of(context);
     final auth = ref.read(authProvider);
     if (!auth.isAuthenticated) return;
     final storage = ref.read(storageProvider);
@@ -58,32 +57,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    final enable = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Activer les notifications ?'),
-        content: const Text('Recevoir des alertes pour les demandes d\'amis et les seances partagees.'),
-        actions: [
-          TextButton(
-            onPressed: () => navigator.pop(false),
-            child: const Text('Plus tard'),
-          ),
-          FilledButton(
-            onPressed: () => navigator.pop(true),
-            child: const Text('Activer'),
-          ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-
     await storage.setBool(StorageService.pushPromptedKey, true);
-    if (enable == true) {
-      await storage.setBool(StorageService.pushOptInKey, true);
+    await storage.setBool(StorageService.pushOptInKey, true);
+    try {
       await ref.read(pushNotificationsProvider.notifier).toggle(true);
-    } else {
-      await storage.setBool(StorageService.pushOptInKey, false);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'activer les notifications.')),
+      );
     }
   }
 
