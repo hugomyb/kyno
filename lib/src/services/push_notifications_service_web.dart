@@ -38,6 +38,33 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
   }
 
   @override
+  Future<PushDiagnostics?> buildDiagnostics() async {
+    final notificationsSupported = html.Notification.supported;
+    final serviceWorkerSupported = html.window.navigator.serviceWorker != null;
+    bool serviceWorkerReady = false;
+    bool pushManagerSupported = false;
+    String? serviceWorkerError;
+
+    if (serviceWorkerSupported) {
+      try {
+        final registration = await _getRegistration();
+        serviceWorkerReady = registration != null;
+        pushManagerSupported = registration?.pushManager != null;
+      } catch (e) {
+        serviceWorkerError = e.toString();
+      }
+    }
+
+    return PushDiagnostics(
+      notificationsSupported: notificationsSupported,
+      serviceWorkerSupported: serviceWorkerSupported,
+      serviceWorkerReady: serviceWorkerReady,
+      pushManagerSupported: pushManagerSupported,
+      serviceWorkerError: serviceWorkerError,
+    );
+  }
+
+  @override
   Future<PushPermission> checkPermission() async {
     switch (html.Notification.permission) {
       case 'granted':

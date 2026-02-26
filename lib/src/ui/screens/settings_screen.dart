@@ -306,6 +306,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+        if (state.diagnostics != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Diag: notif=${state.diagnostics!.notificationsSupported ? 'ok' : 'no'} | '
+            'sw=${state.diagnostics!.serviceWorkerSupported ? 'ok' : 'no'} | '
+            'ready=${state.diagnostics!.serviceWorkerReady ? 'ok' : 'no'} | '
+            'push=${state.diagnostics!.pushManagerSupported ? 'ok' : 'no'}',
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.textSecondary,
+            ),
+          ),
+          if (state.diagnostics!.serviceWorkerError != null &&
+              state.diagnostics!.serviceWorkerError!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'SW error: ${state.diagnostics!.serviceWorkerError}',
+              style: TextStyle(
+                fontSize: 10,
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }

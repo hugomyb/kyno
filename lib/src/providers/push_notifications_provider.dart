@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/push_notifications_types.dart';
@@ -10,6 +9,7 @@ class PushNotificationsState {
     required this.isEnabled,
     required this.permission,
     this.supportReason,
+    this.diagnostics,
     this.isLoading = false,
     this.error,
   });
@@ -18,6 +18,7 @@ class PushNotificationsState {
   final bool isEnabled;
   final PushPermission permission;
   final String? supportReason;
+  final PushDiagnostics? diagnostics;
   final bool isLoading;
   final String? error;
 
@@ -26,6 +27,7 @@ class PushNotificationsState {
     bool? isEnabled,
     PushPermission? permission,
     String? supportReason,
+    PushDiagnostics? diagnostics,
     bool? isLoading,
     String? error,
   }) {
@@ -34,6 +36,7 @@ class PushNotificationsState {
       isEnabled: isEnabled ?? this.isEnabled,
       permission: permission ?? this.permission,
       supportReason: supportReason ?? this.supportReason,
+      diagnostics: diagnostics ?? this.diagnostics,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -45,6 +48,7 @@ class PushNotificationsState {
       isEnabled: false,
       permission: PushPermission.prompt,
       supportReason: null,
+      diagnostics: null,
       isLoading: false,
       error: null,
     );
@@ -64,6 +68,11 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
+      PushDiagnostics? diagnostics;
+      try {
+        diagnostics = await _service.buildDiagnostics();
+      } catch (_) {}
+
       final support = await _service.checkSupport();
       if (!support.isSupported) {
         state = state.copyWith(
@@ -71,6 +80,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
           supportReason: support.reason,
           permission: PushPermission.prompt,
           isEnabled: false,
+          diagnostics: diagnostics,
           isLoading: false,
         );
         return;
@@ -83,12 +93,14 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
         supportReason: support.reason,
         permission: permission,
         isEnabled: enabled,
+        diagnostics: diagnostics,
         isLoading: false,
       );
     } catch (e) {
       final message = 'Impossible de charger les notifications push: $e';
       state = state.copyWith(
         isLoading: false,
+        diagnostics: state.diagnostics,
         error: message,
       );
     }

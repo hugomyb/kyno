@@ -12,6 +12,11 @@ class _PushNotificationsServiceStub implements PushNotificationsService {
   }
 
   @override
+  Future<PushDiagnostics?> buildDiagnostics() async {
+    return null;
+  }
+
+  @override
   Future<PushPermission> checkPermission() async {
     return PushPermission.denied;
   }
