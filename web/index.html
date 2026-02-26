@@ -45,6 +45,7 @@
     if ('serviceWorker' in navigator) {
       let updateBanner;
       let refreshing = false;
+      let lastRegistration = null;
 
       const showUpdateBanner = (registration) => {
         if (updateBanner) return;
@@ -103,8 +104,9 @@
           .finally(() => window.location.reload());
       });
 
-      navigator.serviceWorker.getRegistration().then((registration) => {
+      const trackRegistration = (registration) => {
         if (!registration) return;
+        lastRegistration = registration;
         if (registration.waiting) {
           showUpdateBanner(registration);
         }
@@ -117,7 +119,19 @@
             }
           });
         });
+      };
+
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.ready.then((registration) => {
+          trackRegistration(registration);
+          registration.update();
+          setInterval(() => {
+            registration.update();
+          }, 60 * 1000);
+        });
       });
+
+      navigator.serviceWorker.getRegistration().then(trackRegistration);
     }
   </script>
   <script src="flutter_bootstrap.js" async></script>
