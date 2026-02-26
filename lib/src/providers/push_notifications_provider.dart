@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/push_notifications_types.dart';
@@ -64,19 +65,31 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final support = await _service.checkSupport();
+      if (!support.isSupported) {
+        state = state.copyWith(
+          supported: false,
+          supportReason: support.reason,
+          permission: PushPermission.prompt,
+          isEnabled: false,
+          isLoading: false,
+        );
+        return;
+      }
+
       final permission = await _service.checkPermission();
-      final enabled = support.isSupported ? await _service.isSubscribed() : false;
+      final enabled = await _service.isSubscribed();
       state = state.copyWith(
-        supported: support.isSupported,
+        supported: true,
         supportReason: support.reason,
         permission: permission,
         isEnabled: enabled,
         isLoading: false,
       );
-    } catch (_) {
+    } catch (e) {
+      final message = 'Impossible de charger les notifications push: $e';
       state = state.copyWith(
         isLoading: false,
-        error: 'Impossible de charger les notifications push',
+        error: message,
       );
     }
   }
