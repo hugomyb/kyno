@@ -77,7 +77,11 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       }
 
       final permission = await _service.checkPermission();
-      final enabled = await _service.isSubscribed();
+      var enabled = await _service.isSubscribed();
+      if (!enabled && permission == PushPermission.granted) {
+        // Permission already granted; attempt to create/restore subscription.
+        enabled = await _service.enable();
+      }
       state = state.copyWith(
         supported: true,
         supportReason: support.reason,

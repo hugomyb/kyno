@@ -29,10 +29,12 @@
       const buildStampMeta = document.querySelector('meta[name="build-stamp"]');
       const buildStamp = buildStampMeta ? buildStampMeta.getAttribute('content') : null;
       const bannerKey = buildStamp ? `update-banner:${buildStamp}` : 'update-banner';
+      const storedStamp = buildStamp ? localStorage.getItem('build-stamp') : null;
 
       const showUpdateBanner = (registration) => {
         if (updateBanner) return;
         if (sessionStorage.getItem(bannerKey) === '1') return;
+        if (buildStamp && storedStamp && storedStamp === buildStamp) return;
         updateBanner = document.createElement('div');
         updateBanner.style.position = 'fixed';
         updateBanner.style.left = '16px';
@@ -69,6 +71,9 @@
           sessionStorage.setItem(bannerKey, '1');
           if (updateBanner && updateBanner.parentNode) {
             updateBanner.parentNode.removeChild(updateBanner);
+          }
+          if (buildStamp) {
+            localStorage.setItem('build-stamp', buildStamp);
           }
           if (registration && registration.waiting) {
             registration.waiting.postMessage('skipWaiting');
@@ -130,6 +135,9 @@
           trackRegistration(reg);
         }
       });
+      if (buildStamp && !storedStamp) {
+        localStorage.setItem('build-stamp', buildStamp);
+      }
     }
   </script>
   <script src="flutter_bootstrap.js" async></script>
