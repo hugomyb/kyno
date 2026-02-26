@@ -413,7 +413,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'Reg: ${state.diagnostics!.hasRegistration ? 'yes' : 'no'} | '
             'scope=${state.diagnostics!.registrationScope} | '
             'script=${state.diagnostics!.registrationScriptUrl} | '
-            'state=${state.diagnostics!.registrationState}',
+            'state=${state.diagnostics!.registrationState} | '
+            'src=${state.diagnostics!.registrationSource}',
             style: TextStyle(
               fontSize: 10,
               color: colors.textSecondary,

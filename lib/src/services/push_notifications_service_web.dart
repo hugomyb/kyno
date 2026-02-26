@@ -52,6 +52,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
     String registrationScope = '';
     String registrationScriptUrl = '';
     String registrationState = '';
+    String registrationSource = 'none';
     String? serviceWorkerError;
 
     if (serviceWorkerSupported) {
@@ -64,6 +65,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
           registrationScope = registration.scope ?? '';
           registrationScriptUrl = registration.active?.scriptUrl ?? '';
           registrationState = registration.active?.state ?? '';
+          registrationSource = 'ready/getRegistration';
         }
       } catch (e) {
         serviceWorkerError = e.toString();
@@ -85,6 +87,7 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       registrationState: registrationState,
       currentUrl: html.window.location.href,
       baseUrl: html.document.baseUri ?? '',
+      registrationSource: registrationSource,
       serviceWorkerError: serviceWorkerError,
     );
   }
@@ -96,15 +99,40 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       return false;
     }
     try {
-      final swUrl = Uri.parse(html.document.baseUri ?? '/')
-          .resolve('flutter_service_worker.js')
-          .toString();
-      final registration = await swContainer.register(swUrl);
+      final base = html.document.baseUri ?? '/';
+      final swUrl = Uri.parse(base).resolve('flutter_service_worker.js').toString();
+      final scope = Uri.parse(base).path.endsWith('/') ? Uri.parse(base).path : '${Uri.parse(base).path}/';
+      final registration = await swContainer.register(swUrl, {
+        'scope': scope,
+        'updateViaCache': 'none',
+      });
       await registration.update();
       final ready = await _getRegistration();
       return ready != null;
+    } catch (e) {
+      throw Exception('SW register failed: $e');
+    }
+  }
+
+  Future<html.ServiceWorkerRegistration?> _getRegistration() async {
+    final swContainer = html.window.navigator.serviceWorker;
+    if (swContainer == null) {
+      return null;
+    }
+    try {
+      final current = html.window.location.href.split('#').first;
+      final direct = await swContainer.getRegistration(current).timeout(
+            const Duration(seconds: 2),
+          );
+      return direct;
     } catch (_) {
-      return false;
+      // Ignore and fallback to ready.
+    }
+    try {
+      final ready = swContainer.ready;
+      return await ready.timeout(const Duration(seconds: 3));
+    } catch (_) {
+      return null;
     }
   }
 
@@ -214,18 +242,6 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
 
     if (endpoint != null && endpoint.isNotEmpty) {
       await _api.unregisterPushSubscription(endpoint: endpoint);
-    }
-  }
-
-  Future<html.ServiceWorkerRegistration?> _getRegistration() async {
-    try {
-      final ready = html.window.navigator.serviceWorker?.ready;
-      if (ready == null) {
-        return null;
-      }
-      return await ready.timeout(const Duration(seconds: 3));
-    } catch (_) {
-      return null;
     }
   }
 

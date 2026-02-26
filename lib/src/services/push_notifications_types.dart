@@ -30,6 +30,7 @@ class PushDiagnostics {
     required this.registrationState,
     required this.currentUrl,
     required this.baseUrl,
+    required this.registrationSource,
     this.serviceWorkerError,
   });
 
@@ -47,6 +48,7 @@ class PushDiagnostics {
   final String registrationState;
   final String currentUrl;
   final String baseUrl;
+  final String registrationSource;
   final String? serviceWorkerError;
 }
 

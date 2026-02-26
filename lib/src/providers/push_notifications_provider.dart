@@ -145,10 +145,10 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
     try {
       await _service.forceRegisterServiceWorker();
       await refresh();
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Impossible de forcer le service worker',
+        error: 'Impossible de forcer le service worker: $e',
       );
     }
   }
