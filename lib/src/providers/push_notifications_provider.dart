@@ -10,6 +10,7 @@ class PushNotificationsState {
     required this.permission,
     this.supportReason,
     this.diagnostics,
+    this.lastCheckedAt,
     this.isLoading = false,
     this.error,
   });
@@ -19,6 +20,7 @@ class PushNotificationsState {
   final PushPermission permission;
   final String? supportReason;
   final PushDiagnostics? diagnostics;
+  final DateTime? lastCheckedAt;
   final bool isLoading;
   final String? error;
 
@@ -28,6 +30,7 @@ class PushNotificationsState {
     PushPermission? permission,
     String? supportReason,
     PushDiagnostics? diagnostics,
+    DateTime? lastCheckedAt,
     bool? isLoading,
     String? error,
   }) {
@@ -37,6 +40,7 @@ class PushNotificationsState {
       permission: permission ?? this.permission,
       supportReason: supportReason ?? this.supportReason,
       diagnostics: diagnostics ?? this.diagnostics,
+      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -49,6 +53,7 @@ class PushNotificationsState {
       permission: PushPermission.prompt,
       supportReason: null,
       diagnostics: null,
+      lastCheckedAt: null,
       isLoading: false,
       error: null,
     );
@@ -75,12 +80,14 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
 
       final support = await _service.checkSupport();
       if (!support.isSupported) {
+        final reason = support.reason ?? 'Support indisponible (raison inconnue)';
         state = state.copyWith(
           supported: false,
-          supportReason: support.reason,
+          supportReason: reason,
           permission: PushPermission.prompt,
           isEnabled: false,
           diagnostics: diagnostics,
+          lastCheckedAt: DateTime.now(),
           isLoading: false,
         );
         return;
@@ -94,6 +101,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
         permission: permission,
         isEnabled: enabled,
         diagnostics: diagnostics,
+        lastCheckedAt: DateTime.now(),
         isLoading: false,
       );
     } catch (e) {
@@ -101,6 +109,7 @@ class PushNotificationsNotifier extends Notifier<PushNotificationsState> {
       state = state.copyWith(
         isLoading: false,
         diagnostics: state.diagnostics,
+        lastCheckedAt: DateTime.now(),
         error: message,
       );
     }
