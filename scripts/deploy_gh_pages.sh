@@ -72,7 +72,7 @@ git add -A
 if git diff --cached --quiet; then
   echo "No changes to deploy."
 else
-  git commit -m "Deploy to gh-pages"
+  git commit -m "Deploy to gh-pages (${STAMP})"
   git push origin "${BRANCH}"
 fi
 

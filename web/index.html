@@ -110,7 +110,16 @@
         });
       };
 
+      const ensureServiceWorker = () => {
+        const swUrl = new URL('flutter_service_worker.js', document.baseURI).toString();
+        return navigator.serviceWorker
+          .register(swUrl)
+          .then(trackRegistration)
+          .catch(() => {});
+      };
+
       window.addEventListener('load', () => {
+        ensureServiceWorker();
         navigator.serviceWorker.ready.then((registration) => {
           trackRegistration(registration);
           registration.update();
@@ -120,7 +129,13 @@
         });
       });
 
-      navigator.serviceWorker.getRegistration().then(trackRegistration);
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) {
+          ensureServiceWorker();
+        } else {
+          trackRegistration(reg);
+        }
+      });
       if (storedStamp && buildStamp && storedStamp !== buildStamp) {
         showUpdateBanner(lastRegistration);
       }
