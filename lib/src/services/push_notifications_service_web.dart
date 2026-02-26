@@ -142,9 +142,11 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
         throw Exception('vapid:empty');
       }
 
+      final keyBytes = _decodeVapidKey(publicKey);
       final options = {
         'userVisibleOnly': true,
-        'applicationServerKey': _decodeVapidKey(publicKey),
+        // Use ArrayBuffer to satisfy Safari's subscribe requirements.
+        'applicationServerKey': keyBytes.buffer,
       };
 
       subscription = await _subscribe(pushManager, options);
