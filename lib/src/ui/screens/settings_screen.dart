@@ -367,9 +367,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'Diag: notif=${state.diagnostics!.notificationsSupported ? 'ok' : 'no'} | '
             'sw=${state.diagnostics!.serviceWorkerSupported ? 'ok' : 'no'} | '
             'ready=${state.diagnostics!.serviceWorkerReady ? 'ok' : 'no'} | '
-            'push=${state.diagnostics!.pushManagerSupported ? 'ok' : 'no'}',
+            'push=${state.diagnostics!.pushManagerSupported ? 'ok' : 'no'} | '
+            'standalone=${state.diagnostics!.displayModeStandalone ? 'ok' : 'no'} | '
+            'ctrl=${state.diagnostics!.hasServiceWorkerController ? 'ok' : 'no'} | '
+            'secure=${state.diagnostics!.isSecureContext ? 'ok' : 'no'}',
             style: TextStyle(
               fontSize: 11,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'UA: ${state.diagnostics!.userAgent}',
+            style: TextStyle(
+              fontSize: 10,
               color: colors.textSecondary,
             ),
           ),

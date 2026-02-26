@@ -41,6 +41,11 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
   Future<PushDiagnostics?> buildDiagnostics() async {
     final notificationsSupported = html.Notification.supported;
     final serviceWorkerSupported = html.window.navigator.serviceWorker != null;
+    final displayModeStandalone = html.window.matchMedia('(display-mode: standalone)').matches;
+    final isSecureContext = html.window.isSecureContext ?? false;
+    final hasServiceWorkerController =
+        html.window.navigator.serviceWorker?.controller != null;
+    final userAgent = html.window.navigator.userAgent;
     bool serviceWorkerReady = false;
     bool pushManagerSupported = false;
     String? serviceWorkerError;
@@ -60,6 +65,10 @@ class _PushNotificationsServiceWeb implements PushNotificationsService {
       serviceWorkerSupported: serviceWorkerSupported,
       serviceWorkerReady: serviceWorkerReady,
       pushManagerSupported: pushManagerSupported,
+      displayModeStandalone: displayModeStandalone,
+      hasServiceWorkerController: hasServiceWorkerController,
+      isSecureContext: isSecureContext,
+      userAgent: userAgent,
       serviceWorkerError: serviceWorkerError,
     );
   }

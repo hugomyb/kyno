@@ -20,6 +20,10 @@ class PushDiagnostics {
     required this.serviceWorkerSupported,
     required this.serviceWorkerReady,
     required this.pushManagerSupported,
+    required this.displayModeStandalone,
+    required this.hasServiceWorkerController,
+    required this.isSecureContext,
+    required this.userAgent,
     this.serviceWorkerError,
   });
 
@@ -27,6 +31,10 @@ class PushDiagnostics {
   final bool serviceWorkerSupported;
   final bool serviceWorkerReady;
   final bool pushManagerSupported;
+  final bool displayModeStandalone;
+  final bool hasServiceWorkerController;
+  final bool isSecureContext;
+  final String userAgent;
   final String? serviceWorkerError;
 }
 
