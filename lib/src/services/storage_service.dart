@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class StorageService {
   StorageService(this._box);
@@ -7,6 +8,9 @@ class StorageService {
   static const String authTokenKey = 'auth_token_v1';
 
   final Box<String> _box;
+  final ValueNotifier<int> _authTokenVersion = ValueNotifier<int>(0);
+
+  ValueListenable<int> get authTokenVersion => _authTokenVersion;
 
   static Future<StorageService> init() async {
     await Hive.initFlutter();
@@ -24,10 +28,12 @@ class StorageService {
 
   Future<void> saveAuthToken(String token) async {
     await _box.put(authTokenKey, token);
+    _authTokenVersion.value++;
   }
 
   Future<void> clearAuthToken() async {
     await _box.delete(authTokenKey);
+    _authTokenVersion.value++;
   }
 
   String? getString(String key) {

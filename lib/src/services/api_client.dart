@@ -41,7 +41,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool auth = true,
-  }) {
+  }) async {
     final uri = Uri.parse('$apiBaseUrl$path');
     final headers = <String, String>{
       'Accept': 'application/json',
@@ -58,15 +58,30 @@ class ApiClient {
 
     switch (method) {
       case 'GET':
-        return http.get(uri, headers: headers);
+        final res = await http.get(uri, headers: headers);
+        await _handleUnauthorized(res, auth);
+        return res;
       case 'POST':
-        return http.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+        final res = await http.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+        await _handleUnauthorized(res, auth);
+        return res;
       case 'PUT':
-        return http.put(uri, headers: headers, body: jsonEncode(body ?? {}));
+        final res = await http.put(uri, headers: headers, body: jsonEncode(body ?? {}));
+        await _handleUnauthorized(res, auth);
+        return res;
       case 'DELETE':
-        return http.delete(uri, headers: headers);
+        final res = await http.delete(uri, headers: headers);
+        await _handleUnauthorized(res, auth);
+        return res;
       default:
         throw ArgumentError('Unsupported method: $method');
+    }
+  }
+
+  Future<void> _handleUnauthorized(http.Response res, bool auth) async {
+    if (!auth) return;
+    if (res.statusCode == 401) {
+      await _storage.clearAuthToken();
     }
   }
 }

@@ -65,6 +65,7 @@ class AuthNotifier extends Notifier<AuthState> {
   AuthState build() {
     _storage = ref.watch(storageProvider);
     _authService = ref.watch(authServiceProvider);
+    ref.watch(authTokenVersionProvider);
 
     final token = _storage.loadAuthToken();
     if (token == null) {

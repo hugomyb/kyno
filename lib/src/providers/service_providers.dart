@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_client.dart';
@@ -9,6 +10,11 @@ import '../services/storage_service.dart';
 
 final storageProvider = Provider<StorageService>((ref) {
   throw UnimplementedError();
+});
+
+final authTokenVersionProvider = Provider<ValueListenable<int>>((ref) {
+  final storage = ref.watch(storageProvider);
+  return storage.authTokenVersion;
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
