@@ -42,7 +42,13 @@ else
   else
     git checkout --orphan "${BRANCH}"
     git reset --hard
-    git checkout -
+    if git show-ref --verify --quiet "refs/heads/main"; then
+      git checkout main
+    elif git show-ref --verify --quiet "refs/heads/master"; then
+      git checkout master
+    else
+      git checkout -
+    fi
   fi
 fi
 
