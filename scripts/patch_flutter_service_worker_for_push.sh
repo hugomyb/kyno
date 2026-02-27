@@ -32,7 +32,7 @@ self.addEventListener('push', function (event) {
     }
   }
 
-  const scopeUrl = self.registration && self.registration.scope ? self.registration.scope : '/';
+  const scopeUrl = self.registration && self.registration.scope ? self.registration.scope : self.location.origin + '/';
   const iconUrl = new URL('icons/Icon-192.png', scopeUrl).toString();
   const title = data.title || 'Kyno';
   const payloadUrl = data.url || (data.data && data.data.url);
@@ -42,7 +42,7 @@ self.addEventListener('push', function (event) {
     icon: iconUrl,
     badge: iconUrl,
     data: Object.assign({
-      url: payloadUrl || (scopeUrl + 'notifications'),
+      url: payloadUrl || '#/notifications',
     }, data.data || {}),
   };
 
@@ -51,11 +51,20 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  const scopeUrl = self.registration && self.registration.scope ? self.registration.scope : '/';
+  const scopeUrl = self.registration && self.registration.scope ? self.registration.scope : self.location.origin + '/';
   const rawTarget = event.notification && event.notification.data && event.notification.data.url
     ? event.notification.data.url
-    : (scopeUrl + 'notifications');
-  const targetUrl = new URL(rawTarget, scopeUrl).toString();
+    : (scopeUrl + '#/notifications');
+  let targetUrl;
+  try {
+    const scopeBase = new URL(scopeUrl, self.location.href);
+    const candidate = new URL(rawTarget, scopeBase);
+    targetUrl = candidate.origin === scopeBase.origin
+      ? candidate.toString()
+      : new URL('#/notifications', scopeBase).toString();
+  } catch (e) {
+    targetUrl = new URL('#/notifications', self.location.href).toString();
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
