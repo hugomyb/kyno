@@ -38,16 +38,28 @@ if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
   :
 else
   if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
+    git fetch origin "${BRANCH}:${BRANCH}" >/dev/null 2>&1 || true
+  else
+    git fetch origin "${BRANCH}" >/dev/null 2>&1 || true
+  fi
+
+  BASE_BRANCH=""
+  if git show-ref --verify --quiet "refs/heads/main"; then
+    BASE_BRANCH="main"
+  elif git show-ref --verify --quiet "refs/heads/master"; then
+    BASE_BRANCH="master"
+  else
+    BASE_BRANCH="$(git branch --show-current || true)"
+  fi
+
+  if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
     git branch "${BRANCH}" "origin/${BRANCH}"
   else
     git checkout --orphan "${BRANCH}"
     git reset --hard
-    if git show-ref --verify --quiet "refs/heads/main"; then
-      git checkout main
-    elif git show-ref --verify --quiet "refs/heads/master"; then
-      git checkout master
-    else
-      git checkout -
+    git commit --allow-empty -m "Init gh-pages"
+    if [ -n "${BASE_BRANCH}" ]; then
+      git checkout "${BASE_BRANCH}"
     fi
   fi
 fi
