@@ -40,7 +40,7 @@ else
   if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
     git branch "${BRANCH}" "origin/${BRANCH}"
   else
-    git branch --orphan "${BRANCH}"
+    git checkout --orphan "${BRANCH}"
     git reset --hard
     git checkout -
   fi
@@ -67,6 +67,13 @@ fi
 touch "${WORKTREE_DIR}/.nojekyll"
 
 pushd "${WORKTREE_DIR}" >/dev/null
+
+if ! git config user.email >/dev/null; then
+  git config user.email "ci@local"
+fi
+if ! git config user.name >/dev/null; then
+  git config user.name "CI"
+fi
 
 git add -A
 if git diff --cached --quiet; then
