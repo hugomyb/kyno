@@ -105,7 +105,7 @@ if git diff --cached --quiet; then
   echo "No changes to deploy."
 else
   git commit -m "Deploy to gh-pages (${STAMP})"
-  git push origin "${BRANCH}" --force-with-lease
+  git push origin "${BRANCH}" --force
 fi
 
 popd >/dev/null
