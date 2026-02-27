@@ -5,6 +5,7 @@ BASE_HREF="/kyno/"
 BUILD_DIR="build/web"
 WORKTREE_DIR="/tmp/gh-pages"
 BRANCH="gh-pages"
+REPO_URL="${GITHUB_REPO_URL:-https://github.com/hugomyb/kyno.git}"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "flutter not found in PATH" >&2
@@ -85,6 +86,12 @@ fi
 touch "${WORKTREE_DIR}/.nojekyll"
 
 pushd "${WORKTREE_DIR}" >/dev/null
+
+if [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GH_TOKEN:-}" ] || [ -n "${GITHUB_PAT:-}" ]; then
+  TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_PAT:-}}}"
+  AUTH_URL="https://${TOKEN}@github.com/$(echo "${REPO_URL}" | sed 's#^https://github.com/##')"
+  git remote set-url origin "${AUTH_URL}"
+fi
 
 if ! git config user.email >/dev/null; then
   git config user.email "ci@local"
