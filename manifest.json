@@ -1,0 +1,53 @@
+{
+    "name": "Kyno - Musculation",
+    "short_name": "Kyno",
+    "start_url": "/kyno/",
+    "display": "standalone",
+    "background_color": "#17203A",
+    "theme_color": "#3B82F6",
+    "description": "Application de suivi de programme de musculation à la maison",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "categories": ["health", "fitness", "lifestyle"],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Démarrer entraînement",
+            "short_name": "Workout",
+            "description": "Commencer une séance",
+            "url": "/kyno/workout",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Programme",
+            "short_name": "Programme",
+            "description": "Voir mon programme",
+            "url": "/kyno/program",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

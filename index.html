@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/kyno/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="kyno">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.ico"/>
+
+  <title>kyno</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <meta name="build-stamp" content="20260228134203">
+  <script>
+    if ('serviceWorker' in navigator) {
+      let updateBanner;
+      let refreshing = false;
+      let lastRegistration = null;
+      const buildStampMeta = document.querySelector('meta[name="build-stamp"]');
+      const buildStamp = buildStampMeta ? buildStampMeta.getAttribute('content') : null;
+      const bannerKey = buildStamp ? `update-banner:${buildStamp}` : 'update-banner';
+      const storedStamp = buildStamp ? localStorage.getItem('build-stamp') : null;
+
+      const showUpdateBanner = (registration) => {
+        if (updateBanner) return;
+        if (sessionStorage.getItem(bannerKey) === '1') return;
+        if (buildStamp && storedStamp && storedStamp === buildStamp) return;
+        updateBanner = document.createElement('div');
+        updateBanner.style.position = 'fixed';
+        updateBanner.style.left = '16px';
+        updateBanner.style.right = '16px';
+        updateBanner.style.bottom = '16px';
+        updateBanner.style.zIndex = '9999';
+        updateBanner.style.display = 'flex';
+        updateBanner.style.alignItems = 'center';
+        updateBanner.style.justifyContent = 'space-between';
+        updateBanner.style.padding = '12px 16px';
+        updateBanner.style.borderRadius = '12px';
+        updateBanner.style.background = 'rgba(15, 23, 42, 0.95)';
+        updateBanner.style.color = '#fff';
+        updateBanner.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+        updateBanner.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+
+        const label = document.createElement('div');
+        label.textContent = 'Mise à jour dispo';
+        label.style.fontSize = '14px';
+        label.style.fontWeight = '600';
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Mettre à jour';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '10px';
+        btn.style.padding = '8px 12px';
+        btn.style.background = '#3B82F6';
+        btn.style.color = '#fff';
+        btn.style.fontSize = '14px';
+        btn.style.fontWeight = '700';
+        btn.style.cursor = 'pointer';
+
+        btn.addEventListener('click', () => {
+          sessionStorage.setItem(bannerKey, '1');
+          if (updateBanner && updateBanner.parentNode) {
+            updateBanner.parentNode.removeChild(updateBanner);
+          }
+          if (buildStamp) {
+            localStorage.setItem('build-stamp', buildStamp);
+          }
+          if (registration && registration.waiting) {
+            registration.waiting.postMessage('skipWaiting');
+          } else if (registration) {
+            registration.update().finally(() => window.location.reload());
+          } else {
+            window.location.reload();
+          }
+        });
+
+        updateBanner.appendChild(label);
+        updateBanner.appendChild(btn);
+        document.body.appendChild(updateBanner);
+      };
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        // Avoid auto-reload loops on iOS; rely on user-initiated update.
+      });
+
+      const trackRegistration = (registration) => {
+        if (!registration) return;
+        lastRegistration = registration;
+        if (registration.waiting) {
+          showUpdateBanner(registration);
+        }
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateBanner(registration);
+            }
+          });
+        });
+      };
+
+      const ensureServiceWorker = () => {
+        const swUrl = new URL('flutter_service_worker.js', document.baseURI).toString();
+        return navigator.serviceWorker
+          .register(swUrl)
+          .then(trackRegistration)
+          .catch(() => {});
+      };
+
+      window.addEventListener('load', () => {
+        ensureServiceWorker();
+        navigator.serviceWorker.ready.then((registration) => {
+          trackRegistration(registration);
+          registration.update();
+        });
+      });
+
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) {
+          ensureServiceWorker();
+        } else {
+          trackRegistration(reg);
+        }
+      });
+      if (buildStamp && !storedStamp) {
+        localStorage.setItem('build-stamp', buildStamp);
+      }
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
