@@ -9,6 +9,7 @@ class StorageService {
   static const String pushOptInKey = 'push_opt_in_v1';
   static const String pushPromptedKey = 'push_prompted_v1';
   static const String pendingWorkoutKey = 'pending_workout_v1';
+  static const String appDataCacheKey = 'app_data_cache_v1';
 
   final Box<String> _box;
   final ValueNotifier<int> _authTokenVersion = ValueNotifier<int>(0);
