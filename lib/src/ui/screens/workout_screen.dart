@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../models/session.dart';
 import '../../models/session_template.dart';
 import '../../providers/app_data_provider.dart';
+import '../../providers/service_providers.dart';
 import '../../services/audio_service.dart';
+import '../../services/storage_service.dart';
+import '../../services/workout_resume_state.dart';
 import '../../services/workout_ui_state.dart';
 import '../../utils/number_format.dart';
 import '../theme/app_colors.dart';
@@ -53,10 +57,16 @@ class WorkoutStep {
 }
 
 class WorkoutScreen extends ConsumerStatefulWidget {
-  const WorkoutScreen({super.key, this.sessionId, this.restart = false});
+  const WorkoutScreen({
+    super.key,
+    this.sessionId,
+    this.restart = false,
+    this.resumeRequested = false,
+  });
 
   final String? sessionId;
   final bool restart;
+  final bool resumeRequested;
 
   @override
   ConsumerState<WorkoutScreen> createState() => _WorkoutScreenState();
@@ -76,6 +86,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   bool _sessionReady = false;
   bool _soundInitialized = false;
   bool _audioUnlocked = false;
+  bool _wakeLockHeld = false;
+  bool _pendingStateHydrated = false;
   WorkoutSessionLog? _completedSession;
   Map<String, String> _lastPerformanceByExerciseId = {};
 
@@ -91,6 +103,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   void dispose() {
     _timer?.cancel();
     _elapsedTimer?.cancel();
+    _setSessionAwake(false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       workoutActive.value = false;
     });
@@ -1253,9 +1266,46 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _currentStepIndex = 0;
     _remainingSeconds = 0;
     _stage = WorkoutStage.recap;
+    _elapsedSeconds = 0;
+    _paused = false;
     _sessionReady = true;
     _lastPerformanceByExerciseId = _buildLastPerformanceMap();
+
+    if (widget.resumeRequested && !_pendingStateHydrated) {
+      _pendingStateHydrated = true;
+      _restorePendingState(session);
+    }
+
     setState(() {});
+  }
+
+  void _restorePendingState(TrainingSessionTemplate session) {
+    if (_steps.isEmpty) {
+      return;
+    }
+
+    final storage = ref.read(storageProvider);
+    final raw = storage.getString(StorageService.pendingWorkoutKey);
+    final pending = raw == null ? null : PendingWorkoutState.fromStorageString(raw);
+
+    if (pending == null || pending.sessionId != session.id) {
+      return;
+    }
+
+    _currentStepIndex = pending.currentStepIndex.clamp(0, _steps.length - 1);
+    _remainingSeconds = pending.remainingSeconds < 0 ? 0 : pending.remainingSeconds;
+    _elapsedSeconds = pending.elapsedSeconds < 0 ? 0 : pending.elapsedSeconds;
+    _paused = pending.paused;
+    _completedSession = null;
+
+    if (pending.stage == PendingWorkoutStage.countdown) {
+      _stage = WorkoutStage.countdown;
+      _startCountdownTimer(preserveRemaining: true);
+    } else {
+      _stage = WorkoutStage.running;
+      _startElapsedTimer();
+      _startStep(preserveRemaining: true);
+    }
   }
 
   Map<String, String> _buildLastPerformanceMap() {
@@ -1545,6 +1595,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
   void _startFromRecap() {
     if (_steps.isEmpty) return;
+    _setSessionAwake(true);
 
     // IMPORTANT: On iOS, we MUST play audio immediately on user click
     // This unlocks the audio context for future plays
@@ -1562,8 +1613,31 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _stage = WorkoutStage.countdown;
     _remainingSeconds = startSeconds;
     setState(() {});
+    _startCountdownTimer();
+    _persistPendingWorkout();
+  }
+
+  void _startWorkout() {
+    _stage = WorkoutStage.running;
+    _currentStepIndex = 0;
+    _elapsedSeconds = 0;
+    _paused = false;
+    _completedSession = null;
+    _startElapsedTimer();
+    _startStep();
+    _persistPendingWorkout();
+  }
+
+  void _startCountdownTimer({bool preserveRemaining = false}) {
     _timer?.cancel();
-    // Play beep for countdown start
+    if (!preserveRemaining) {
+      final profile = ref.read(appDataProvider).profile;
+      _remainingSeconds = profile.startTimerSeconds;
+    }
+    if (_remainingSeconds <= 0) {
+      _startWorkout();
+      return;
+    }
     if (_soundEnabled) {
       _playBeep();
     }
@@ -1578,24 +1652,17 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         return;
       }
       setState(() => _remainingSeconds -= 1);
+      _persistPendingWorkout();
     });
   }
 
-  void _startWorkout() {
-    _stage = WorkoutStage.running;
-    _currentStepIndex = 0;
-    _elapsedSeconds = 0;
-    _paused = false;
-    _completedSession = null;
-    _startElapsedTimer();
-    _startStep();
-  }
-
-  void _startStep() {
+  void _startStep({bool preserveRemaining = false}) {
     _timer?.cancel();
     final step = _steps[_currentStepIndex];
     if (step.type == WorkoutStepType.rest || step.isTimedExercise) {
-      _remainingSeconds = step.durationSeconds;
+      if (!preserveRemaining) {
+        _remainingSeconds = step.durationSeconds;
+      }
       setState(() {});
       if (_remainingSeconds <= 0) {
         _advanceStep();
@@ -1617,10 +1684,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           return;
         }
         setState(() => _remainingSeconds -= 1);
+        _persistPendingWorkout();
       });
+      _persistPendingWorkout();
       return;
     }
     setState(() {});
+    _persistPendingWorkout();
   }
 
   void _advanceStep() {
@@ -1640,6 +1710,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     }
     _currentStepIndex = nextIndex;
     _startStep();
+    _persistPendingWorkout();
   }
 
   Future<void> _finishCurrent() async {
@@ -1699,7 +1770,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       _completedSession = workout;
       _stage = WorkoutStage.summary;
     });
+    _setSessionAwake(false);
     workoutActive.value = false;
+    await _clearPendingWorkout();
   }
 
   void _startElapsedTimer() {
@@ -1708,6 +1781,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       if (!mounted) return;
       if (_paused) return;
       setState(() => _elapsedSeconds += 1);
+      _persistPendingWorkout();
     });
   }
 
@@ -1781,6 +1855,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
 
   void _togglePause() {
     setState(() => _paused = !_paused);
+    _persistPendingWorkout();
   }
 
   void _toggleSound() {
@@ -1802,6 +1877,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   }
 
   void _goBack() {
+    _setSessionAwake(false);
+    unawaited(_clearPendingWorkout());
     if (!mounted) return;
     context.go('/');
   }
@@ -1818,6 +1895,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       workoutActive.value = true;
     });
+    _persistPendingWorkout();
   }
 
   Future<void> _stopSession() async {
@@ -1879,8 +1957,57 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     if (result != true) return;
     _timer?.cancel();
     _elapsedTimer?.cancel();
+    _setSessionAwake(false);
     workoutActive.value = false;
+    await _clearPendingWorkout();
     if (!mounted) return;
     context.go('/');
+  }
+
+  void _persistPendingWorkout() {
+    if (!_sessionReady) return;
+    if (widget.sessionId == null || widget.sessionId!.isEmpty) return;
+    final stage = switch (_stage) {
+      WorkoutStage.countdown => PendingWorkoutStage.countdown,
+      WorkoutStage.running => PendingWorkoutStage.running,
+      _ => null,
+    };
+    if (stage == null) return;
+
+    final session = ref.read(appDataProvider).sessions.firstWhere(
+          (s) => s.id == widget.sessionId,
+          orElse: () => TrainingSessionTemplate(
+            id: widget.sessionId!,
+            name: 'Séance',
+            notes: null,
+            groups: const [],
+          ),
+        );
+
+    final payload = PendingWorkoutState(
+      sessionId: widget.sessionId!,
+      sessionName: session.name,
+      stage: stage,
+      currentStepIndex: _currentStepIndex,
+      remainingSeconds: _remainingSeconds,
+      elapsedSeconds: _elapsedSeconds,
+      paused: _paused,
+    );
+
+    unawaited(
+      ref
+          .read(storageProvider)
+          .setString(StorageService.pendingWorkoutKey, payload.toStorageString()),
+    );
+  }
+
+  Future<void> _clearPendingWorkout() {
+    return ref.read(storageProvider).delete(StorageService.pendingWorkoutKey);
+  }
+
+  void _setSessionAwake(bool enabled) {
+    if (_wakeLockHeld == enabled) return;
+    _wakeLockHeld = enabled;
+    unawaited(enabled ? WakelockPlus.enable() : WakelockPlus.disable());
   }
 }

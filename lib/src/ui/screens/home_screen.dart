@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../services/push_notifications_types.dart';
 import '../../services/storage_service.dart';
+import '../../services/workout_resume_state.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/custom_app_bar.dart';
@@ -34,8 +35,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_didPrompt) return;
     _didPrompt = true;
     Future.microtask(() {
-      _maybePromptPush();
+      _runStartupPrompts();
     });
+  }
+
+  Future<void> _runStartupPrompts() async {
+    await _maybePromptResumeWorkout();
+    if (!mounted) return;
+    await _maybePromptPush();
+  }
+
+  Future<void> _maybePromptResumeWorkout() async {
+    if (!mounted) return;
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+
+    final storage = ref.read(storageProvider);
+    final raw = storage.getString(StorageService.pendingWorkoutKey);
+    if (raw == null || raw.isEmpty) return;
+
+    final pending = PendingWorkoutState.fromStorageString(raw);
+    if (pending == null) {
+      await storage.delete(StorageService.pendingWorkoutKey);
+      return;
+    }
+
+    final decision = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Reprendre la séance ?'),
+        content: Text('Tu as une séance en cours: "${pending.sessionName}".'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Abandonner'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reprendre'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (decision == true) {
+      final encodedSessionId = Uri.encodeQueryComponent(pending.sessionId);
+      context.go('/workout?sessionId=$encodedSessionId&resume=1');
+      return;
+    }
+
+    await storage.delete(StorageService.pendingWorkoutKey);
   }
 
   Future<void> _maybePromptPush() async {

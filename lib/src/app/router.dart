@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
-import '../providers/app_lifecycle_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../services/workout_ui_state.dart';
 import '../ui/screens/home_screen.dart';
@@ -30,7 +29,6 @@ final routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
 });
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  ref.watch(appLifecycleProvider);
   final refreshListenable = ref.watch(routerRefreshProvider);
   final authState = ref.watch(authProvider);
 
@@ -95,6 +93,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => WorkoutScreen(
               sessionId: state.uri.queryParameters['sessionId'],
               restart: state.uri.queryParameters['restart'] == '1',
+              resumeRequested: state.uri.queryParameters['resume'] == '1',
             ),
           ),
           GoRoute(
