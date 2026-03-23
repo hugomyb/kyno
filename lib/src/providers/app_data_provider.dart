@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,6 +12,7 @@ import '../models/session.dart';
 import '../models/session_template.dart';
 import '../services/api_exceptions.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import 'auth_provider.dart';
 import 'service_providers.dart';
 
@@ -88,22 +92,34 @@ final appDataProvider = NotifierProvider<AppDataNotifier, AppData>(
 
 class AppDataNotifier extends Notifier<AppData> {
   late ApiService api;
+  late StorageService storage;
   final _uuid = const Uuid();
+  bool _didHydrateFromCache = false;
 
   @override
   AppData build() {
     api = ref.watch(apiServiceProvider);
+    storage = ref.watch(storageProvider);
     final authState = ref.watch(authProvider);
 
     ref.listen<AuthState>(authProvider, (previous, next) {
       final wasAuthed = previous?.isAuthenticated ?? false;
       if (!wasAuthed && next.isAuthenticated) {
+        _didHydrateFromCache = false;
+        _hydrateFromCache();
         loadAll();
       }
       if (wasAuthed && !next.isAuthenticated) {
         state = AppData.empty();
+        _didHydrateFromCache = false;
+        unawaited(storage.delete(StorageService.appDataCacheKey));
       }
     });
+
+    if (authState.isAuthenticated && !_didHydrateFromCache) {
+      _didHydrateFromCache = true;
+      _hydrateFromCache();
+    }
 
     if (authState.isAuthenticated) {
       Future.microtask(loadAll);
@@ -137,10 +153,11 @@ class AppDataNotifier extends Notifier<AppData> {
         workoutSessions: results[6] as List<WorkoutSessionLog>,
         activeWorkout: results[7] as ActiveWorkout?,
       );
+      unawaited(_persistCache());
     } on UnauthorizedException {
       await ref.read(authProvider.notifier).forceLogout();
     } on ApiException {
-      // Keep current state on transient API errors.
+      // Keep cached/current state on transient API errors.
     }
   }
 
@@ -165,18 +182,21 @@ class AppDataNotifier extends Notifier<AppData> {
   Future<void> refreshExercises() async {
     try {
       state = state.copyWith(exercises: await api.fetchExercises());
+      unawaited(_persistCache());
     } catch (_) {}
   }
 
   Future<void> refreshSessions() async {
     try {
       state = state.copyWith(sessions: await api.fetchSessions());
+      unawaited(_persistCache());
     } catch (_) {}
   }
 
   Future<void> refreshProgram() async {
     try {
       state = state.copyWith(program: await api.fetchProgram());
+      unawaited(_persistCache());
     } catch (_) {}
   }
 
@@ -186,6 +206,7 @@ class AppDataNotifier extends Notifier<AppData> {
       state = state.copyWith(
         profile: updated.copyWith(weightHistory: state.weightEntries),
       );
+      unawaited(_persistCache());
     } on UnauthorizedException {
       await ref.read(authProvider.notifier).forceLogout();
     }
@@ -228,6 +249,7 @@ class AppDataNotifier extends Notifier<AppData> {
       weightEntries: updatedWeights,
       profile: state.profile.copyWith(weightHistory: updatedWeights),
     );
+    unawaited(_persistCache());
   }
 
   bool _sameDayIso(String a, String b) {
@@ -241,6 +263,7 @@ class AppDataNotifier extends Notifier<AppData> {
     final equipment = Equipment(id: _uuid.v4(), name: name, notes: notes);
     await api.addEquipment(equipment);
     state = state.copyWith(equipment: [...state.equipment, equipment]);
+    unawaited(_persistCache());
   }
 
   Future<void> updateEquipment(Equipment equipment) async {
@@ -249,6 +272,7 @@ class AppDataNotifier extends Notifier<AppData> {
         .map((e) => e.id == equipment.id ? equipment : e)
         .toList();
     state = state.copyWith(equipment: updated);
+    unawaited(_persistCache());
   }
 
   Future<void> removeEquipment(String id) async {
@@ -256,6 +280,7 @@ class AppDataNotifier extends Notifier<AppData> {
     state = state.copyWith(
       equipment: state.equipment.where((e) => e.id != id).toList(),
     );
+    unawaited(_persistCache());
   }
 
   Future<Exercise?> addExercise(
@@ -271,6 +296,7 @@ class AppDataNotifier extends Notifier<AppData> {
         ),
       );
       state = state.copyWith(exercises: [...state.exercises, created]);
+      unawaited(_persistCache());
       return created;
     } on UnauthorizedException {
       await ref.read(authProvider.notifier).forceLogout();
@@ -283,6 +309,7 @@ class AppDataNotifier extends Notifier<AppData> {
     state = state.copyWith(
       exercises: state.exercises.where((e) => e.id != id).toList(),
     );
+    unawaited(_persistCache());
   }
 
   Future<TrainingSessionTemplate> saveSession(TrainingSessionTemplate session) async {
@@ -299,6 +326,7 @@ class AppDataNotifier extends Notifier<AppData> {
       sessions.add(updated);
     }
     state = state.copyWith(sessions: sessions);
+    unawaited(_persistCache());
     return updated;
   }
 
@@ -314,19 +342,23 @@ class AppDataNotifier extends Notifier<AppData> {
       );
       final saved = await api.updateProgram(updatedProgram);
       state = state.copyWith(program: saved);
+      unawaited(_persistCache());
     }
     await api.deleteSession(id);
     state = state.copyWith(sessions: state.sessions.where((s) => s.id != id).toList());
+    unawaited(_persistCache());
   }
 
   Future<void> updateProgram(Program program) async {
     final updated = await api.updateProgram(program);
     state = state.copyWith(program: updated);
+    unawaited(_persistCache());
   }
 
   Future<void> addWorkoutSession(WorkoutSessionLog session) async {
     final created = await api.createWorkoutSession(session);
     state = state.copyWith(workoutSessions: [...state.workoutSessions, created]);
+    unawaited(_persistCache());
   }
 
   Future<void> updateWorkoutSession(WorkoutSessionLog session) async {
@@ -335,16 +367,102 @@ class AppDataNotifier extends Notifier<AppData> {
         .map((s) => s.id == updated.id ? updated : s)
         .toList();
     state = state.copyWith(workoutSessions: list);
+    unawaited(_persistCache());
   }
 
   Future<void> setActiveWorkout(ActiveWorkout? activeWorkout) async {
     if (activeWorkout == null) {
       await api.clearActiveWorkout();
       state = state.copyWith(activeWorkout: null);
+      unawaited(_persistCache());
       return;
     }
 
     final updated = await api.updateActiveWorkout(activeWorkout);
     state = state.copyWith(activeWorkout: updated);
+    unawaited(_persistCache());
+  }
+
+  void _hydrateFromCache() {
+    final raw = storage.getString(StorageService.appDataCacheKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+      final profileJson = decoded['profile'];
+      final programJson = decoded['program'];
+      if (profileJson is! Map || programJson is! Map) {
+        return;
+      }
+      state = AppData(
+        profile: Profile.fromJson(
+          profileJson.cast<String, dynamic>(),
+        ),
+        weightEntries: _decodeList(
+          decoded['weight_entries'],
+          (e) => WeightEntry.fromJson(e),
+        ),
+        equipment: _decodeList(
+          decoded['equipment'],
+          (e) => Equipment.fromJson(e),
+        ),
+        exercises: _decodeList(
+          decoded['exercises'],
+          (e) => Exercise.fromJson(e),
+        ),
+        sessions: _decodeList(
+          decoded['sessions'],
+          (e) => TrainingSessionTemplate.fromJson(e),
+        ),
+        program: Program.fromJson(
+          programJson.cast<String, dynamic>(),
+        ),
+        workoutSessions: _decodeList(
+          decoded['workout_sessions'],
+          (e) => WorkoutSessionLog.fromJson(e),
+        ),
+        activeWorkout: null,
+      );
+    } catch (_) {
+      // Ignore corrupted cache.
+    }
+  }
+
+  Future<void> _persistCache() async {
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) {
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      'profile': state.profile.toJson(),
+      'weight_entries': state.weightEntries.map((e) => e.toJson()).toList(),
+      'equipment': state.equipment.map((e) => e.toJson()).toList(),
+      'exercises': state.exercises.map((e) => e.toJson()).toList(),
+      'sessions': state.sessions.map((e) => e.toJson()).toList(),
+      'program': state.program.toJson(),
+      'workout_sessions': state.workoutSessions.map((e) => e.toJson()).toList(),
+    };
+
+    await storage.setString(StorageService.appDataCacheKey, jsonEncode(payload));
+  }
+
+  List<T> _decodeList<T>(
+    dynamic source,
+    T Function(Map<String, dynamic>) decoder,
+  ) {
+    if (source is! List) {
+      return <T>[];
+    }
+    final result = <T>[];
+    for (final item in source) {
+      if (item is Map) {
+        result.add(decoder(item.cast<String, dynamic>()));
+      }
+    }
+    return result;
   }
 }

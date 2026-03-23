@@ -510,7 +510,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget _statCard(BuildContext context, _StatItem stat, bool isNarrow) {
     final colors = context.themeColors;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isNarrow ? 12 : 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isNarrow ? 12 : 16, vertical: 14),
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(16),
