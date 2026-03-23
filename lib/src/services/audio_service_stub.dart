@@ -12,9 +12,10 @@ class AudioService {
     // No-op on native platforms
   }
 
-  Future<void> playBeep() async {
+  Future<void> playBeep({bool isFinal = false}) async {
     try {
       await _player.stop();
+      await _player.setPlaybackRate(isFinal ? 1.8 : 1.0);
       await _player.play(AssetSource('sounds/beep.wav'));
     } catch (_) {
       // no-op

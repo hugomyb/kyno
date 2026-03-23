@@ -1570,7 +1570,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
       if (_remainingSeconds <= 3 && _remainingSeconds >= 1) {
-        _playBeep();
+        _playBeep(isFinal: _remainingSeconds == 1);
       }
       if (_remainingSeconds <= 1) {
         timer.cancel();
@@ -1608,11 +1608,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         if (!mounted) return;
         if (_paused) return;
         if (_remainingSeconds <= 3 && _remainingSeconds >= 1) {
-          _playBeep();
+          _playBeep(isFinal: _remainingSeconds == 1);
         }
         if (_remainingSeconds <= 1) {
           timer.cancel();
-          _playBeep();
           _advanceStep();
           return;
         }
@@ -1796,9 +1795,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     }
   }
 
-  void _playBeep() {
+  void _playBeep({bool isFinal = false}) {
     if (!_soundEnabled) return;
-    audioService.playBeep();
+    audioService.playBeep(isFinal: isFinal);
   }
 
   void _goBack() {

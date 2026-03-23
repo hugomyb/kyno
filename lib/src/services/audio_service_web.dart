@@ -63,7 +63,7 @@ class AudioService {
   }
 
   /// Play a beep sound using Web Audio API
-  Future<void> playBeep() async {
+  Future<void> playBeep({bool isFinal = false}) async {
     if (!_initialized) _initAudio();
     if (_audioContext == null) return;
 
@@ -74,40 +74,44 @@ class AudioService {
         return; // unlock() already plays a beep
       }
 
-      await _playBeepInternal();
+      await _playBeepInternal(isFinal: isFinal);
     } catch (e) {
       print('Audio play error: $e');
     }
   }
 
   /// Internal method to play a beep using Web Audio API oscillator
-  Future<void> _playBeepInternal() async {
+  Future<void> _playBeepInternal({bool isFinal = false}) async {
     if (_audioContext == null) return;
 
     try {
       final context = _audioContext as js.JsObject;
 
-      // Create oscillator for beep sound (800Hz)
+      // Create oscillator for beep sound
       final oscillator = context.callMethod('createOscillator', []);
       final gainNode = context.callMethod('createGain', []);
 
-      // Set frequency to 800Hz (nice beep sound)
       final frequency = (oscillator as js.JsObject)['frequency'];
-      (frequency as js.JsObject).callMethod('setValueAtTime', [800, context['currentTime']]);
-
-      // Set volume
       final gain = (gainNode as js.JsObject)['gain'];
-      (gain as js.JsObject).callMethod('setValueAtTime', [0.3, context['currentTime']]);
+
+      if (isFinal) {
+        (frequency as js.JsObject).callMethod('setValueAtTime', [1200, context['currentTime']]);
+        (gain as js.JsObject).callMethod('setValueAtTime', [0.5, context['currentTime']]);
+      } else {
+        (frequency as js.JsObject).callMethod('setValueAtTime', [800, context['currentTime']]);
+        (gain as js.JsObject).callMethod('setValueAtTime', [0.3, context['currentTime']]);
+      }
 
       // Connect oscillator -> gain -> destination
       oscillator.callMethod('connect', [gainNode]);
       gainNode.callMethod('connect', [context['destination']]);
 
-      // Play for 100ms
+      // Play for 100ms (normal) or 300ms (final)
+      final duration = isFinal ? 0.3 : 0.1;
       oscillator.callMethod('start', [context['currentTime']]);
-      oscillator.callMethod('stop', [(context['currentTime'] as num) + 0.1]);
+      oscillator.callMethod('stop', [(context['currentTime'] as num) + duration]);
 
-      print('Beep played (Web Audio API)');
+      print('Beep played (Web Audio API) - ${isFinal ? "FINAL 1200Hz" : "800Hz"}');
     } catch (e) {
       print('Beep play error: $e');
     }

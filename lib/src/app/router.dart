@@ -30,7 +30,6 @@ final routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
 });
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  ref.watch(appLifecycleProvider);
   final refreshListenable = ref.watch(routerRefreshProvider);
   final authState = ref.watch(authProvider);
 
