@@ -12,6 +12,10 @@ class AudioService {
     // No-op on native platforms
   }
 
+  void startSilentLoop() {
+    // No-op on native platforms
+  }
+
   Future<void> playBeep({bool isFinal = false}) async {
     try {
       await _player.stop();

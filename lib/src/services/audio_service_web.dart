@@ -10,6 +10,7 @@ class AudioService {
   dynamic _audioContext;
   bool _unlocked = false;
   bool _initialized = false;
+  bool _silentLoopActive = false;
 
   void _initAudio() {
     try {
@@ -77,6 +78,40 @@ class AudioService {
       await _playBeepInternal(isFinal: isFinal);
     } catch (e) {
       print('Audio play error: $e');
+    }
+  }
+
+  /// Start a silent audio loop to keep iOS audio session alive when screen is off.
+  /// Must be called from a user gesture.
+  void startSilentLoop() {
+    if (_silentLoopActive) return;
+    if (_audioContext == null) return;
+
+    try {
+      final context = _audioContext as js.JsObject;
+
+      // Create a silent buffer (1 second of silence)
+      final sampleRate = (context['sampleRate'] as num).toInt();
+      final buffer = context.callMethod('createBuffer', [1, sampleRate, sampleRate]);
+
+      // Create a buffer source that loops forever
+      final source = context.callMethod('createBufferSource', []);
+      (source as js.JsObject)['buffer'] = buffer;
+      source['loop'] = true;
+
+      // Connect through a gain node at zero volume
+      final gainNode = context.callMethod('createGain', []);
+      final gain = (gainNode as js.JsObject)['gain'];
+      (gain as js.JsObject).callMethod('setValueAtTime', [0, context['currentTime']]);
+
+      source.callMethod('connect', [gainNode]);
+      gainNode.callMethod('connect', [context['destination']]);
+      source.callMethod('start', [0]);
+
+      _silentLoopActive = true;
+      print('Silent audio loop started (keeps iOS alive)');
+    } catch (e) {
+      print('Silent loop error: $e');
     }
   }
 

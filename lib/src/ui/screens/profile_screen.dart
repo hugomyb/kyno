@@ -616,8 +616,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, reservedSize: 36),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 46,
+                        getTitlesWidget: (value, meta) {
+                          if (value == meta.min || value == meta.max) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
                     ),
                     rightTitles: const AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
@@ -628,15 +640,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
-                          if (index < 0 || index >= sorted.length) {
+                          if (value != index.toDouble()) return const SizedBox.shrink();
+                          if (index != 0 && index != sorted.length - 1) {
                             return const SizedBox.shrink();
                           }
                           final date = DateTime.tryParse(sorted[index].dateIso);
                           final label =
                               date == null ? '' : DateFormat('dd/MM').format(date);
-                          return Text(label, style: const TextStyle(fontSize: 10));
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(label, style: const TextStyle(fontSize: 10)),
+                          );
                         },
                       ),
                     ),

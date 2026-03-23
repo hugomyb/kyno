@@ -1601,6 +1601,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     // This unlocks the audio context for future plays
     if (_soundEnabled && !_audioUnlocked) {
       audioService.unlock(); // This plays a beep immediately
+      audioService.startSilentLoop(); // Keep audio session alive when screen is off
       setState(() => _audioUnlocked = true);
     }
 
